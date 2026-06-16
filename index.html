@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ascendant — SQL &amp; Databricks Skill Trees</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<style>
+:root{
+  --gold:#ffce4a; --green:#3ff0a8; --red:#ff5d7a; --orange:#ff9d4a; --blue:#46b3ff; --glass:rgba(255,255,255,.05);
+  --bg:#070b18; --bg2:#0c1330; --panel:rgba(18,26,54,.78); --panel2:rgba(13,20,44,.94);
+  --line:rgba(120,150,255,.18); --txt:#e8edff; --mut:#9aa6d6; --dim:#6b769f;
+  --cy:#28e0ff; --cy2:#7c5cff; --avail:#28e0ff; --availGlow:rgba(40,224,255,.5); --prog:#7c5cff;
+  --star:#9fb4ff; --soft:rgba(124,92,255,.20); --soft2:rgba(40,224,255,.12);
+  --bggrad:radial-gradient(1200px 800px at 20% -10%,#13205a 0%,transparent 55%),radial-gradient(1000px 700px at 100% 110%,#2a1660 0%,transparent 55%),#070b18;
+}
+body.theme-sql{
+  --bg:#070b18; --bg2:#0c1330; --panel:rgba(18,26,54,.78); --panel2:rgba(13,20,44,.94);
+  --line:rgba(120,150,255,.18); --txt:#e8edff; --mut:#9aa6d6; --dim:#6b769f;
+  --cy:#28e0ff; --cy2:#7c5cff; --avail:#28e0ff; --availGlow:rgba(40,224,255,.5); --prog:#7c5cff;
+  --star:#9fb4ff; --soft:rgba(124,92,255,.20); --soft2:rgba(40,224,255,.12);
+  --bggrad:radial-gradient(1200px 800px at 20% -10%,#13205a 0%,transparent 55%),radial-gradient(1000px 700px at 100% 110%,#2a1660 0%,transparent 55%),#070b18;
+}
+body.theme-dbx{
+  --bg:#0a0708; --bg2:#1a0f0c; --panel:rgba(40,22,18,.78); --panel2:rgba(26,14,11,.95);
+  --line:rgba(255,120,80,.16); --txt:#ffeee6; --mut:#d6a896; --dim:#9f7766;
+  --cy:#ff6b3d; --cy2:#ff3621; --avail:#46b3ff; --availGlow:rgba(70,179,255,.5); --prog:#ff6b3d;
+  --star:#ffb89f; --soft:rgba(255,54,33,.18); --soft2:rgba(255,157,74,.12);
+  --bggrad:radial-gradient(1200px 800px at 20% -10%,#3a160c 0%,transparent 55%),radial-gradient(1000px 700px at 100% 110%,#5a1a0c 0%,transparent 55%),#0a0708;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bggrad);color:var(--txt);overflow:hidden;height:100vh}
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5}
+#hud{position:fixed;top:0;left:0;right:0;height:64px;z-index:30;display:flex;align-items:center;gap:14px;padding:0 16px;
+  background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.2));border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+.logo{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:.5px;font-size:17px}
+.logo .mark{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,var(--cy),var(--cy2));box-shadow:0 0 22px var(--availGlow);font-size:18px}
+.logo small{display:block;font-size:10px;color:var(--mut);letter-spacing:2px;font-weight:600}
+.hud-spacer{flex:1}
+.diffsel{display:flex;align-items:center;gap:3px;background:var(--glass);border:1px solid var(--line);border-radius:10px;padding:3px}
+.diffsel .dlab{font-size:9px;color:var(--mut);letter-spacing:1px;padding:0 5px}
+.diffsel button{border:none;background:transparent;color:var(--mut);padding:6px 11px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;transition:.15s}
+.diffsel button.on{background:linear-gradient(135deg,var(--cy),var(--cy2));color:#fff}
+.lvl{display:flex;align-items:center;gap:10px}
+.lvl .badge{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:18px;background:conic-gradient(var(--gold),#ff8a3d);color:#1a1300;box-shadow:0 0 18px rgba(255,206,74,.5)}
+.xpwrap{width:200px}
+.xpbar{height:9px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid var(--line)}
+.xpfill{height:100%;width:0;background:linear-gradient(90deg,var(--cy),var(--cy2));transition:width .6s cubic-bezier(.2,.9,.2,1);box-shadow:0 0 12px var(--cy)}
+.xptext{font-size:11px;color:var(--mut);margin-top:3px;display:flex;justify-content:space-between}
+.stat{display:flex;flex-direction:column;align-items:center;min-width:54px;padding:4px 7px;border-radius:10px;background:var(--glass);border:1px solid var(--line)}
+.stat b{font-size:16px;line-height:1}
+.stat span{font-size:9px;color:var(--mut);letter-spacing:.5px;text-transform:uppercase;margin-top:3px}
+.flame{color:var(--orange)}
+.iconbtn{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--glass);color:var(--txt);cursor:pointer;font-size:17px;transition:.15s}
+.iconbtn:hover{background:var(--soft);transform:translateY(-1px)}
+#guide{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:25;display:flex;align-items:center;gap:12px;padding:9px 16px;border-radius:30px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px);font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.4);max-width:92vw}
+#guide b{color:var(--cy)}
+#guide button{margin-left:6px;border:none;background:linear-gradient(135deg,var(--cy),var(--cy2));color:#fff;padding:6px 14px;border-radius:20px;font-weight:700;cursor:pointer;font-size:12px}
+#stage{position:fixed;inset:0;z-index:5;cursor:grab;overflow:hidden}
+#stage.drag{cursor:grabbing}
+#world{position:absolute;left:0;top:0;transform-origin:0 0}
+#links{position:absolute;left:0;top:0;pointer-events:none}
+.node{position:absolute;width:96px;height:96px;transform:translate(-50%,-50%);cursor:pointer;z-index:2}
+.ring{position:absolute;inset:-6px;border-radius:50%;padding:4px;background:conic-gradient(var(--green) calc(var(--p)*1%),rgba(255,255,255,.07) 0)}
+.ring::after{content:'';position:absolute;inset:4px;border-radius:50%;background:var(--bg2)}
+.core{position:absolute;inset:6px;border-radius:50%;display:grid;place-items:center;text-align:center;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.08),var(--bg2));border:2px solid var(--line);transition:.2s;z-index:2}
+.core .em{font-size:30px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+.node .label{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:8px;white-space:nowrap;font-size:12px;font-weight:700;text-align:center}
+.node .sub{display:block;font-size:9.5px;color:var(--mut);font-weight:600;margin-top:1px}
+.node .xpchip{position:absolute;top:-4px;right:-2px;background:var(--gold);color:#1a1300;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:10px;z-index:3;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.node.locked .core{filter:grayscale(.9) brightness(.55);border-color:rgba(255,255,255,.08)}
+.node.locked .em{opacity:.4}
+.node.locked .lock{position:absolute;font-size:20px;z-index:4}
+.node.available .core{border-color:var(--avail);box-shadow:0 0 26px var(--availGlow);animation:pulse 2.4s infinite}
+.node.progress .core{border-color:var(--prog);box-shadow:0 0 22px var(--availGlow)}
+.node.mastered .core{border-color:var(--gold);box-shadow:0 0 30px rgba(255,206,74,.55);background:radial-gradient(circle at 35% 30%,#3a2f12,#1a1404)}
+.node.mastered .crown{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:18px;z-index:4;filter:drop-shadow(0 0 6px var(--gold))}
+.node.support.available .core{border-color:var(--orange);box-shadow:0 0 26px rgba(255,157,74,.45)}
+.node.support .label{color:#ffd9ab}
+.node.delta.available .core{border-color:var(--red);box-shadow:0 0 26px rgba(255,93,122,.45)}
+.node.delta .label{color:#ffb3c1}
+.node.pyspark.available .core{border-color:var(--orange);box-shadow:0 0 26px rgba(255,157,74,.45)}
+.node.pyspark .label{color:#ffd9ab}
+.node.platform.available .core{border-color:var(--green);box-shadow:0 0 26px rgba(63,240,168,.45)}
+.node.platform .label{color:#a8f3d2}
+.node:hover .core{transform:scale(1.09)}
+@keyframes pulse{0%,100%{box-shadow:0 0 20px var(--availGlow)}50%{box-shadow:0 0 34px var(--availGlow)}}
+.link{fill:none;stroke-width:3;stroke-linecap:round}
+.link.locked{stroke:rgba(150,150,170,.12)}
+.link.active{stroke:url(#grad);stroke-dasharray:9 7;animation:flow 1s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-32}}
+#zoomctl{position:fixed;right:18px;bottom:18px;z-index:25;display:flex;flex-direction:column;gap:8px}
+#minimap-note{position:fixed;left:18px;bottom:18px;z-index:20;font-size:11px;color:var(--dim);background:var(--panel);padding:7px 12px;border-radius:8px;border:1px solid var(--line)}
+#overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:18px}
+#overlay.on{display:flex;animation:fade .25s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+#modal{width:min(980px,96vw);max-height:92vh;display:flex;flex-direction:column;border-radius:20px;background:var(--panel2);border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;animation:rise .3s cubic-bezier(.2,.9,.2,1)}
+@keyframes rise{from{transform:translateY(24px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+.m-head{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,var(--soft),var(--soft2))}
+.m-head .em{font-size:32px}
+.m-head h2{font-size:20px}
+.m-head .meta{font-size:12px;color:var(--mut);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
+.m-head .x{margin-left:auto;cursor:pointer;font-size:22px;color:var(--mut);width:34px;height:34px;border-radius:8px;display:grid;place-items:center}
+.m-head .x:hover{background:var(--glass);color:#fff}
+.stars-s{color:var(--gold);letter-spacing:1px}
+.tabs{display:flex;gap:4px;padding:10px 16px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tab{padding:9px 14px;border-radius:10px 10px 0 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--mut);border:1px solid transparent;border-bottom:none;display:flex;align-items:center;gap:6px}
+.tab.active{color:#fff;background:var(--panel);border-color:var(--line)}
+.tab .dot{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.tab.done .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+.tab.elite{color:var(--gold)}
+.m-body{padding:20px;overflow:auto}
+.m-body h3{font-size:16px;margin-bottom:8px;color:var(--cy)}
+.m-body p{color:var(--txt);line-height:1.6;margin-bottom:12px;font-size:14px;opacity:.92}
+.m-body code{background:var(--soft);padding:2px 7px;border-radius:6px;font-family:'Consolas',monospace;font-size:13px;color:#cfe4ff}
+.callout{background:var(--glass);border:1px solid var(--line);border-left:3px solid var(--cy);padding:12px 14px;border-radius:10px;margin:12px 0;font-size:13.5px;color:var(--txt);opacity:.95}
+.viz{background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:12px;padding:14px;margin:14px 0;overflow-x:auto}
+.codeblock{font-family:'Consolas',monospace;font-size:13px;color:#cfe4ff;white-space:pre-wrap;line-height:1.55;margin:0}
+table.data{border-collapse:collapse;width:100%;font-size:12.5px;font-family:'Consolas',monospace}
+table.data th{background:var(--soft);padding:7px 11px;text-align:left;color:var(--txt);position:sticky;top:0;white-space:nowrap}
+table.data td{padding:6px 11px;border-top:1px solid var(--line);white-space:nowrap}
+table.data tr:nth-child(even) td{background:rgba(255,255,255,.025)}
+.flow-cols{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.flow-cols .arrow{font-size:22px;color:var(--cy)}
+.pill{display:inline-block;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:700;margin:2px}
+.examples{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:12px 0 8px}
+.ex-lab{font-size:12.5px;color:var(--mut);font-weight:700;width:100%}
+.ex-chip{border:1px solid var(--line);background:var(--glass);color:var(--txt);padding:7px 12px;border-radius:16px;font-size:12.5px;cursor:pointer;transition:.15s}
+.ex-chip:hover{border-color:var(--cy);background:var(--soft2);transform:translateY(-1px)}
+.sqlbox{width:100%;min-height:100px;background:rgba(0,0,0,.5);border:1px solid var(--line);border-radius:10px;color:#cfe4ff;font-family:'Consolas',monospace;font-size:14px;padding:12px;resize:vertical;line-height:1.55}
+.sqlbox:focus{outline:none;border-color:var(--cy);box-shadow:0 0 0 3px var(--soft2)}
+.btnrow{display:flex;gap:9px;margin-top:10px;flex-wrap:wrap}
+.btn{border:none;border-radius:10px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:13.5px;transition:.15s;display:flex;align-items:center;gap:7px}
+.btn:hover{transform:translateY(-1px)}
+.btn.run{background:linear-gradient(135deg,var(--green),#1fb47a);color:#04221a}
+.btn.hint{background:var(--glass);color:var(--txt);border:1px solid var(--line)}
+.btn.ghost{background:transparent;color:var(--mut);border:1px solid var(--line)}
+.btn.reveal{background:transparent;color:var(--orange);border:1px solid rgba(255,157,74,.4)}
+.result{margin-top:12px}
+.res-msg{padding:11px 14px;border-radius:10px;font-size:13.5px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.res-msg.ok{background:rgba(63,240,168,.12);border:1px solid rgba(63,240,168,.4);color:var(--green)}
+.res-msg.err{background:rgba(255,93,122,.12);border:1px solid rgba(255,93,122,.4);color:var(--red)}
+.res-msg.win{background:linear-gradient(135deg,rgba(255,206,74,.18),rgba(63,240,168,.14));border:1px solid var(--gold);color:var(--gold)}
+.hintbox{background:var(--glass);border:1px dashed var(--line);border-radius:10px;padding:10px 14px;margin-top:8px;font-size:13px;color:var(--txt);opacity:.92}
+.prompt-box{background:linear-gradient(135deg,rgba(255,93,122,.12),rgba(255,157,74,.10));border:1px solid rgba(255,157,74,.3);border-radius:12px;padding:14px;margin-bottom:12px}
+.prompt-box.elite{background:linear-gradient(135deg,rgba(255,206,74,.16),var(--soft));border-color:var(--gold)}
+.prompt-box .tag{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--orange);text-transform:uppercase}
+.prompt-box.elite .tag{color:var(--gold)}
+.prompt-box p{margin:6px 0 0;color:#fff;font-size:14.5px}
+.quiz-opt{display:block;width:100%;text-align:left;padding:12px 15px;margin:8px 0;border-radius:10px;background:var(--glass);border:1px solid var(--line);color:var(--txt);cursor:pointer;font-size:14px;transition:.15s}
+.quiz-opt:hover{border-color:var(--cy);background:var(--soft2)}
+.quiz-opt.right{border-color:var(--green);background:rgba(63,240,168,.15)}
+.quiz-opt.wrong{border-color:var(--red);background:rgba(255,93,122,.15)}
+#toasts{position:fixed;top:74px;right:18px;z-index:60;display:flex;flex-direction:column;gap:10px;max-width:320px}
+.toast{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:12px;padding:12px 15px;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:slidein .4s cubic-bezier(.2,.9,.2,1);display:flex;gap:11px;align-items:center}
+.toast .ic{font-size:24px}
+.toast b{display:block;font-size:13.5px}
+.toast span{font-size:11.5px;color:var(--mut)}
+@keyframes slidein{from{transform:translateX(120%);opacity:0}to{transform:none;opacity:1}}
+.xpfloat{position:fixed;z-index:70;font-weight:800;color:var(--gold);font-size:20px;pointer-events:none;text-shadow:0 2px 10px rgba(0,0,0,.6);animation:floatup 1.2s ease-out forwards}
+@keyframes floatup{from{transform:translateY(0);opacity:1}to{transform:translateY(-70px);opacity:0}}
+#achv{position:fixed;top:0;right:-340px;width:330px;height:100%;z-index:55;background:var(--panel2);border-left:1px solid var(--line);transition:right .35s cubic-bezier(.2,.9,.2,1);padding:18px;overflow:auto}
+#achv.on{right:0;box-shadow:-20px 0 60px rgba(0,0,0,.5)}
+#achv h3{margin-bottom:4px}
+#achv .sub{font-size:12px;color:var(--mut);margin-bottom:16px}
+.achv-item{display:flex;gap:12px;align-items:center;padding:11px;border-radius:12px;background:var(--glass);border:1px solid var(--line);margin-bottom:10px;opacity:.45}
+.achv-item.got{opacity:1;border-color:rgba(255,206,74,.4)}
+.achv-item .ic{font-size:26px;width:42px;text-align:center}
+.achv-item b{font-size:13.5px}
+.achv-item span{font-size:11.5px;color:var(--mut)}
+.achv-close{position:absolute;top:14px;right:14px;cursor:pointer;color:var(--mut);font-size:20px}
+#home{position:fixed;inset:0;z-index:80;display:none;place-items:center;background:radial-gradient(900px 650px at 50% 25%,#1b2350,#06070d);overflow:auto;padding:24px}
+#home.shown{display:grid}
+.home-wrap{text-align:center;max-width:880px;animation:rise .5s}
+#home h1{font-size:46px;font-weight:900;letter-spacing:3px;background:linear-gradient(135deg,#28e0ff,#ff6b3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.home-sub{color:#9aa6d6;margin:12px 0 28px;font-size:15px}
+.game-cards{display:flex;gap:22px;justify-content:center;flex-wrap:wrap}
+.game-card{width:340px;text-align:left;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:24px;cursor:pointer;color:#e8edff;transition:.18s}
+.game-card:hover{transform:translateY(-5px)}
+.game-card.sql{box-shadow:0 0 0 1px rgba(40,224,255,.3),0 16px 40px rgba(0,0,0,.4)}
+.game-card.sql:hover{box-shadow:0 0 34px rgba(40,224,255,.45)}
+.game-card.dbx{box-shadow:0 0 0 1px rgba(255,54,33,.3),0 16px 40px rgba(0,0,0,.4)}
+.game-card.dbx:hover{box-shadow:0 0 34px rgba(255,54,33,.5)}
+.gc-ic{font-size:42px;margin-bottom:10px}
+.game-card h2{font-size:22px;margin-bottom:8px}
+.game-card p{color:#b9c2e6;font-size:13.5px;line-height:1.55;margin-bottom:14px}
+.gc-tags{font-size:11.5px;color:#8893bf;margin-bottom:14px}
+.gc-go{font-weight:800;font-size:14px}
+.game-card.sql .gc-go{color:#28e0ff}
+.game-card.dbx .gc-go{color:#ff6b3d}
+.loadnote{margin-top:22px;font-size:12px;color:#6b769f}
+@media(max-width:680px){.xpwrap{width:110px}.stat{min-width:42px}.logo small{display:none}.diffsel .dlab{display:none}#guide{font-size:11.5px;top:70px}}
+</style>
+</head>
+<body class="theme-sql">
+<canvas class="stars" id="stars"></canvas>
+
+<div id="home" class="shown">
+  <div class="home-wrap">
+    <h1>ASCENDANT</h1>
+    <p class="home-sub">Pick a skill tree. Switch anytime with ⇄. Every challenge <b>scales with the Low / Med / High selector</b> in the top bar — set your difficulty, then play.</p>
+    <div class="game-cards">
+      <button class="game-card sql" data-g="sql">
+        <div class="gc-ic">⛓️</div>
+        <h2>SQL Ascendant</h2>
+        <p>Master the high-value 20% of SQL, plus an Application Support / Data &amp; Analytics track.</p>
+        <div class="gc-tags">23 nodes · live SQLite sandbox · NULLs, CASE, windows, CTEs, troubleshooting</div>
+        <span class="gc-go">Play SQL →</span>
+      </button>
+      <button class="game-card dbx" data-g="databricks">
+        <div class="gc-ic">🧱</div>
+        <h2>Databricks Ascendant</h2>
+        <p>The Databricks Lakehouse for a support &amp; analytics engineer — Spark SQL, Delta, PySpark &amp; ops.</p>
+        <div class="gc-tags">22 nodes · hybrid sandbox · Delta Lake, Unity Catalog, jobs, troubleshooting</div>
+        <span class="gc-go">Play Databricks →</span>
+      </button>
+    </div>
+    <div class="loadnote" id="loadnote">Warming up the SQL engine…</div>
+  </div>
+</div>
+
+<div id="hud">
+  <div class="logo"><div class="mark" id="logoMark">⛓️</div><div id="logoName">SQL ASCENDANT<small>SKILL TREE</small></div></div>
+  <div class="hud-spacer"></div>
+  <div class="diffsel" id="diffsel"><span class="dlab">MODE</span>
+    <button data-d="low">Low</button><button data-d="med">Med</button><button data-d="high">High</button></div>
+  <div class="stat"><b id="s-mastered">0</b><span>Mastered</span></div>
+  <div class="stat"><b id="s-pct">0%</b><span>Complete</span></div>
+  <div class="stat"><b class="flame" id="s-streak">0🔥</b><span>Combo</span></div>
+  <div class="lvl">
+    <div class="badge" id="lvlBadge">1</div>
+    <div class="xpwrap">
+      <div class="xpbar"><div class="xpfill" id="xpfill"></div></div>
+      <div class="xptext"><span id="xpnow">0 XP</span><span id="xpnext">Lv 2 · 100</span></div>
+    </div>
+  </div>
+  <button class="iconbtn" id="homeBtn" title="Switch game">⇄</button>
+  <button class="iconbtn" id="achvBtn" title="Achievements">🏆</button>
+  <button class="iconbtn" id="resetBtn" title="Reset progress">↺</button>
+</div>
+
+<div id="guide"><span>🧭</span><span id="guideText">Loading your path…</span><button id="guideBtn">Go</button></div>
+
+<div id="stage">
+  <div id="world">
+    <svg id="links">
+      <defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+        <stop id="grad0" offset="0%" stop-color="#28e0ff"/><stop id="grad1" offset="100%" stop-color="#7c5cff"/></linearGradient></defs>
+    </svg>
+  </div>
+</div>
+
+<div id="zoomctl">
+  <button class="iconbtn" id="zin">＋</button>
+  <button class="iconbtn" id="zout">－</button>
+  <button class="iconbtn" id="zfit" title="Recenter">⊙</button>
+</div>
+<div id="minimap-note">🖱️ Drag · Scroll to zoom</div>
+
+<div id="overlay"><div id="modal"></div></div>
+
+<div id="achv">
+  <span class="achv-close" id="achvClose">✕</span>
+  <h3>🏆 Achievements</h3>
+  <div class="sub" id="achvSub">0 unlocked</div>
+  <div id="achvList"></div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+/* ===================== GAME DATA (both games) ===================== */
+const GAMES = {
+  sql:{ themeClass:'theme-sql', mark:'⛓️', title:'SQL ASCENDANT', small:'SKILL TREE',
+        legend:'🖱️ Drag · Scroll to zoom · 🛠️ amber = app-support track',
+        grad:['#28e0ff','#7c5cff'], saveKey:'sqlAscendant_v2',
+        engineNote:'Runs live on the embedded SQLite engine.',
+        tables:'customers · products · orders · order_items · employees',
+        SCHEMA:`
+CREATE TABLE customers(id INTEGER, name TEXT, city TEXT, country TEXT, signup_date TEXT, email TEXT);
+INSERT INTO customers VALUES
+(1,'Aisha','Karachi','Pakistan','2024-01-15','aisha@gmail.com'),
+(2,'Bilal','Lahore','Pakistan','2024-02-20','bilal@yahoo.com'),
+(3,'Chen','Shanghai','China','2024-01-30','chen@gmail.com'),
+(4,'Diana','London','UK','2024-03-05','diana@outlook.com'),
+(5,'Emir','Istanbul','Turkey','2024-02-11','emir@gmail.com'),
+(6,'Farah','Dubai','UAE','2024-04-01','farah@company.com'),
+(7,'Gabriel','Madrid','Spain','2024-05-20',NULL);
+
+CREATE TABLE products(id INTEGER, name TEXT, category TEXT, price REAL);
+INSERT INTO products VALUES
+(1,'Laptop','Electronics',1200),(2,'Phone','Electronics',800),
+(3,'Desk','Furniture',300),(4,'Chair','Furniture',150),
+(5,'Notebook','Stationery',5),(6,'Pen','Stationery',2),
+(7,'Monitor','Electronics',250),(8,'Lamp','Furniture',40);
+
+CREATE TABLE orders(id INTEGER, customer_id INTEGER, order_date TEXT, status TEXT, total REAL, coupon TEXT);
+INSERT INTO orders VALUES
+(1,1,'2024-03-01','shipped',1450,'SAVE10'),
+(2,1,'2024-03-15','shipped',800,NULL),
+(3,2,'2024-03-20','pending',305,'WELCOME'),
+(4,3,'2024-04-02','shipped',250,NULL),
+(5,4,'2024-04-10','cancelled',150,NULL),
+(6,5,'2024-04-15','shipped',47,NULL),
+(7,2,'2024-05-01','shipped',1200,'SAVE10'),
+(8,6,'2024-05-05','pending',290,NULL);
+
+CREATE TABLE order_items(id INTEGER, order_id INTEGER, product_id INTEGER, quantity INTEGER);
+INSERT INTO order_items VALUES
+(1,1,1,1),(2,1,7,1),(3,2,2,1),(4,3,3,1),(5,3,5,1),
+(6,4,7,1),(7,5,4,1),(8,6,8,1),(9,6,5,1),(10,6,6,1),(11,7,1,1),(12,8,7,1),(13,8,8,1);
+
+CREATE TABLE employees(id INTEGER, name TEXT, department TEXT, salary INTEGER);
+INSERT INTO employees VALUES
+(1,'Sara','Engineering',95000),(2,'Omar','Engineering',80000),
+(3,'Lia','Sales',60000),(4,'Noah','Sales',72000),
+(5,'Mia','Marketing',65000),(6,'Zane','Engineering',110000);
+`,
+        ACHIEVEMENTS:[
+  {id:'firstquery', ic:'⚡', name:'Hello, Data', desc:'Run your first query'},
+  {id:'firstblood', ic:'🩸', name:'First Blood', desc:'Solve your first challenge'},
+  {id:'speed', ic:'🚀', name:'Speed Demon', desc:'Solve 5 challenges first-try, no hints'},
+  {id:'combo', ic:'🔥', name:'On Fire', desc:'Hit a 5-solve combo streak'},
+  {id:'boss', ic:'⚔️', name:'Boss Slayer', desc:'Defeat any boss fight'},
+  {id:'elite', ic:'💎', name:'Elite Operator', desc:'Beat an Elite challenge (High mode)'},
+  {id:'support', ic:'🛠️', name:'Support Pro', desc:'Master 4 app-support nodes'},
+  {id:'half', ic:'🌓', name:'Halfway Hero', desc:'Master 50% of the tree'},
+  {id:'grandboss', ic:'👑', name:'Grand Champion', desc:'Defeat a Grand Boss'},
+  {id:'allnodes', ic:'🧠', name:'SQL Sage', desc:'Master every node'},
+  {id:'explorer', ic:'🧪', name:'Tinkerer', desc:'Run 12 queries in the sandbox'}
+],
+        NODES:[
+{ id:'tables', title:'Tables', em:'🗄️', deps:[], imp:5, diff:'Novice', xp:20,
+  discover:`<p>A <b>database table</b> is just a grid — like a spreadsheet. Every piece of data SQL touches lives in one. Our practice DB has 5 tables.</p>
+  <div class="viz"><div class="flow-cols">
+    <span class="pill" style="background:rgba(40,224,255,.2)">customers</span>
+    <span class="pill" style="background:rgba(124,92,255,.2)">products</span>
+    <span class="pill" style="background:rgba(63,240,168,.2)">orders</span>
+    <span class="pill" style="background:rgba(255,206,74,.2)">order_items</span>
+    <span class="pill" style="background:rgba(255,93,122,.2)">employees</span></div></div>
+  <div class="callout">💡 First principle: <b>everything in SQL is asking questions about tables.</b></div>`,
+  explore:{intro:`<code>SELECT * FROM table</code> dumps an entire table. Try each table to learn the data you'll be querying all game.`,
+    examples:[
+      {label:'All customers',query:'SELECT * FROM customers;'},
+      {label:'All products',query:'SELECT * FROM products;'},
+      {label:'All orders',query:'SELECT * FROM orders;'},
+      {label:'Order line-items',query:'SELECT * FROM order_items;'}]},
+  practice:{type:'sql', prompt:'Show every row and column from the <code>products</code> table.', expected:`SELECT * FROM products`, ordered:false,
+    hints:['Use SELECT to read data.','<code>*</code> = all columns.','SELECT * FROM products'] }
+},
+{ id:'rows', title:'Rows & Columns', em:'🧱', deps:['tables'], imp:5, diff:'Novice', xp:20,
+  discover:`<p>Tables are built from <b>rows</b> (records — one customer) and <b>columns</b> (fields — name, price). You pick columns by naming them.</p>
+  <div class="viz"><table class="data"><tr><th>name</th><th>city</th></tr><tr><td>Aisha</td><td>Karachi</td></tr><tr><td>Bilal</td><td>Lahore</td></tr></table></div>
+  <div class="callout">💡 Selecting only the columns you need = faster queries and cleaner output.</div>`,
+  explore:{intro:`Name exact columns instead of <code>*</code>. Fewer columns = tidier results — important when you're scanning data during a support investigation.`,
+    examples:[
+      {label:'Name + city',query:'SELECT name, city FROM customers;'},
+      {label:'Name + email',query:'SELECT name, email FROM customers;'},
+      {label:'Product + price',query:'SELECT name, price FROM products;'}]},
+  practice:{type:'sql', prompt:'Select only the <code>name</code> and <code>city</code> columns from <code>customers</code>.', expected:`SELECT name, city FROM customers`, ordered:false,
+    hints:['List the two columns, comma-separated.','SELECT name, city FROM customers'] }
+},
+{ id:'select', title:'SELECT', em:'🎯', deps:['rows'], imp:5, diff:'Easy', xp:30,
+  discover:`<p><code>SELECT</code> is the heartbeat of SQL — how you <b>read</b> data. Every query starts here.</p>
+  <div class="viz"><div class="flow-cols">
+    <span class="pill" style="background:rgba(40,224,255,.25)">SELECT columns</span><span class="arrow">→</span>
+    <span class="pill" style="background:rgba(124,92,255,.25)">FROM table</span><span class="arrow">→</span>
+    <span class="pill" style="background:rgba(63,240,168,.25)">result set</span></div></div>
+  <div class="callout">💡 80/20 truth: <b>SELECT … FROM …</b> alone answers a huge share of real questions.</div>`,
+  explore:{intro:`Rename output columns with <code>AS</code> (an alias), do arithmetic, or select constants. These tricks make ad-hoc reports readable.`,
+    examples:[
+      {label:'Aliases',query:'SELECT name AS product, price AS cost FROM products;'},
+      {label:'Calculated column',query:"SELECT name, price, price * 1.15 AS price_with_tax FROM products;"},
+      {label:'Constant label',query:"SELECT name, 'active customer' AS note FROM customers;"}]},
+  practice:{type:'sql', prompt:'Return the <code>name</code> and <code>price</code> of every product.', expected:`SELECT name, price FROM products`, ordered:false,
+    hints:['SELECT both columns from products.','SELECT name, price FROM products'] }
+},
+{ id:'where', title:'WHERE', em:'🔍', deps:['select'], imp:5, diff:'Easy', xp:40,
+  discover:`<p><code>WHERE</code> <b>filters rows</b> — keeping only records that match a condition. The #1 tool for "show me just the data about X".</p>
+  <div class="viz"><div class="flow-cols">
+   <span class="pill" style="background:rgba(255,255,255,.08)">8 products</span><span class="arrow">→</span>
+   <span class="pill" style="background:rgba(40,224,255,.2)">WHERE price &gt; 200</span><span class="arrow">→</span>
+   <span class="pill" style="background:rgba(63,240,168,.2)">3 products</span></div></div>
+  <p>Operators: <code>=</code> <code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code> <code>!=</code>, plus <code>AND</code> <code>OR</code> <code>IN</code> <code>BETWEEN</code>. Text goes in <code>'single quotes'</code>.</p>`,
+  explore:{intro:`Filtering is how you isolate the rows behind a ticket — one customer, one status, one price band. Combine conditions with AND / OR / IN.`,
+    examples:[
+      {label:'By country',query:"SELECT * FROM customers WHERE country = 'Pakistan';"},
+      {label:'AND condition',query:"SELECT * FROM products WHERE category = 'Electronics' AND price < 1000;"},
+      {label:'IN list',query:"SELECT * FROM orders WHERE status IN ('pending','cancelled');"},
+      {label:'BETWEEN range',query:'SELECT * FROM products WHERE price BETWEEN 100 AND 400;'}]},
+  practice:{type:'sql', prompt:"Find all products in the <code>Electronics</code> category.", expected:`SELECT * FROM products WHERE category='Electronics'`, ordered:false,
+    hints:['Add WHERE after the table.','Text needs single quotes.',"SELECT * FROM products WHERE category = 'Electronics'"] },
+  master:{type:'sql', prompt:'Find products that cost <b>more than 200</b>.', expected:`SELECT * FROM products WHERE price>200`, ordered:false,
+    hints:['Use > on price.','SELECT * FROM products WHERE price > 200'] },
+  elite:{type:'sql', prompt:'Find products that are <b>either Electronics over $500 OR Furniture under $200</b>.', expected:`SELECT * FROM products WHERE (category='Electronics' AND price>500) OR (category='Furniture' AND price<200)`, ordered:false,
+    hints:['Two grouped conditions joined by OR.','Wrap each side in parentheses.',"SELECT * FROM products WHERE (category='Electronics' AND price>500) OR (category='Furniture' AND price<200)"] }
+},
+{ id:'orderby', title:'ORDER BY', em:'↕️', deps:['select'], imp:4, diff:'Easy', xp:35,
+  discover:`<p><code>ORDER BY</code> <b>sorts</b> results. <code>DESC</code> = highest-first, <code>ASC</code> (default) = lowest-first.</p>
+  <div class="callout">💡 Pair with <code>LIMIT 5</code> for instant "top 5" lists — one of the most common real-world patterns.</div>`,
+  explore:{intro:`Sort to surface the extremes fast: most expensive, newest, biggest. Add LIMIT to get just the top N.`,
+    examples:[
+      {label:'Cheapest first',query:'SELECT name, price FROM products ORDER BY price ASC;'},
+      {label:'Top 3 priciest',query:'SELECT name, price FROM products ORDER BY price DESC LIMIT 3;'},
+      {label:'Newest orders',query:'SELECT * FROM orders ORDER BY order_date DESC;'}]},
+  practice:{type:'sql', prompt:'List all products sorted by <code>price</code>, <b>highest first</b>.', expected:`SELECT * FROM products ORDER BY price DESC`, ordered:true,
+    hints:['ORDER BY price.','Add DESC.','SELECT * FROM products ORDER BY price DESC'] }
+},
+{ id:'distinct', title:'DISTINCT', em:'🧬', deps:['select'], imp:3, diff:'Easy', xp:35,
+  discover:`<p><code>DISTINCT</code> removes duplicate rows → the <b>unique</b> values in a column. Perfect for "what statuses / countries / categories exist in this data?"</p>
+  <div class="callout">💡 A go-to first step when exploring an unfamiliar dataset during support triage.</div>`,
+  explore:{intro:`See the distinct "buckets" your data has before you dig in. Great for validating that a column only contains expected values.`,
+    examples:[
+      {label:'Unique categories',query:'SELECT DISTINCT category FROM products;'},
+      {label:'Unique statuses',query:'SELECT DISTINCT status FROM orders;'},
+      {label:'Unique countries',query:'SELECT DISTINCT country FROM customers;'}]},
+  practice:{type:'sql', prompt:'List each <b>unique country</b> customers come from.', expected:`SELECT DISTINCT country FROM customers`, ordered:false,
+    hints:['DISTINCT goes right after SELECT.','SELECT DISTINCT country FROM customers'] }
+},
+{ id:'aggregations', title:'Aggregations', em:'➗', deps:['select'], imp:5, diff:'Medium', xp:50,
+  discover:`<p>Aggregate functions <b>collapse many rows into one number</b>: <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>. The bridge from raw data to insight.</p>
+  <div class="viz"><div class="flow-cols">
+   <span class="pill" style="background:rgba(255,255,255,.08)">8 prices</span><span class="arrow">→</span>
+   <span class="pill" style="background:rgba(124,92,255,.25)">AVG(price)</span><span class="arrow">→</span>
+   <span class="pill" style="background:rgba(63,240,168,.2)">343.4</span></div></div>`,
+  explore:{intro:`Aggregates answer "how many / how much / what's typical" — the metrics every dashboard and status report is built on.`,
+    examples:[
+      {label:'Multi-metric',query:'SELECT COUNT(*) AS items, AVG(price) AS avg_price, MAX(price) AS top FROM products;'},
+      {label:'Revenue total',query:'SELECT SUM(total) AS revenue, AVG(total) AS avg_order FROM orders;'},
+      {label:'Count a condition',query:"SELECT COUNT(*) AS shipped FROM orders WHERE status='shipped';"}]},
+  practice:{type:'sql', prompt:'Count how many customers there are (a single number).', expected:`SELECT COUNT(*) FROM customers`, ordered:false,
+    hints:['Use COUNT(*).','SELECT COUNT(*) FROM customers'] },
+  master:{type:'sql', prompt:'What is the <b>average price</b> of all products?', expected:`SELECT AVG(price) FROM products`, ordered:false,
+    hints:['AVG(price).','SELECT AVG(price) FROM products'] },
+  elite:{type:'sql', prompt:'Return the <b>total revenue</b> (sum of order totals) and the <b>average order value</b> in one query.', expected:`SELECT SUM(total), AVG(total) FROM orders`, ordered:false,
+    hints:['Two aggregates, one SELECT.','SELECT SUM(total), AVG(total) FROM orders'] }
+},
+{ id:'groupby', title:'GROUP BY', em:'🗂️', deps:['aggregations','where'], imp:5, diff:'Medium', xp:60,
+  discover:`<p><code>GROUP BY</code> splits rows into buckets, then aggregates <b>per bucket</b>. "Sales per category", "orders per customer" — all GROUP BY.</p>
+  <div class="viz"><table class="data"><tr><th>category</th><th>COUNT(*)</th></tr><tr><td>Electronics</td><td>3</td></tr><tr><td>Furniture</td><td>3</td></tr><tr><td>Stationery</td><td>2</td></tr></table></div>
+  <div class="callout">💡 Rule: every SELECT column must be in GROUP BY or wrapped in an aggregate.</div>`,
+  explore:{intro:`Grouping turns a raw table into a summary table — the core move behind almost every analytics report.`,
+    examples:[
+      {label:'Per category',query:'SELECT category, COUNT(*) AS n, SUM(price) AS total FROM products GROUP BY category;'},
+      {label:'Orders per status',query:'SELECT status, COUNT(*) AS n, SUM(total) AS revenue FROM orders GROUP BY status;'},
+      {label:'Orders per customer',query:'SELECT customer_id, COUNT(*) AS orders FROM orders GROUP BY customer_id;'}]},
+  practice:{type:'sql', prompt:'Count how many products are in <b>each category</b>.', expected:`SELECT category, COUNT(*) FROM products GROUP BY category`, ordered:false,
+    hints:['SELECT the grouping column + an aggregate.','Add GROUP BY category.','SELECT category, COUNT(*) FROM products GROUP BY category'] },
+  master:{type:'sql', prompt:'Find the <b>total price</b> of products in each category.', expected:`SELECT category, SUM(price) FROM products GROUP BY category`, ordered:false,
+    hints:['SUM(price) with GROUP BY category.','SELECT category, SUM(price) FROM products GROUP BY category'] },
+  boss:{type:'sql', prompt:'⚔️ BOSS — Count products priced <b>over $100</b> in each category. (WHERE + GROUP BY.)', expected:`SELECT category, COUNT(*) FROM products WHERE price>100 GROUP BY category`, ordered:false,
+    hints:['Filter WHERE price > 100 first…','…then GROUP BY category and COUNT.','SELECT category, COUNT(*) FROM products WHERE price > 100 GROUP BY category'] },
+  elite:{type:'sql', prompt:'Show each category with its product count and average price — only categories whose <b>average price is above 100</b>.', expected:`SELECT category, COUNT(*), AVG(price) FROM products GROUP BY category HAVING AVG(price)>100`, ordered:false,
+    hints:['Aggregate per category, then HAVING AVG(price) > 100.','SELECT category, COUNT(*), AVG(price) FROM products GROUP BY category HAVING AVG(price) > 100'] }
+},
+{ id:'having', title:'HAVING', em:'🎚️', deps:['groupby'], imp:4, diff:'Hard', xp:70,
+  discover:`<p><code>HAVING</code> is like <code>WHERE</code>, but it filters <b>groups</b> after aggregation. "Only categories with &gt;2 products", "customers who spent over $1000".</p>
+  <div class="callout">⚠️ WHERE filters rows <i>before</i> grouping; HAVING filters groups <i>after</i>. You'll often use both together.</div>`,
+  explore:{intro:`HAVING is how you surface outliers from a summary — the high-volume buckets, the over-threshold groups that usually matter in a report or an incident.`,
+    examples:[
+      {label:'Big categories',query:'SELECT category, COUNT(*) AS n FROM products GROUP BY category HAVING COUNT(*) > 2;'},
+      {label:'High-revenue status',query:'SELECT status, SUM(total) AS rev FROM orders GROUP BY status HAVING SUM(total) > 500;'}]},
+  practice:{type:'sql', prompt:'Show categories that have <b>more than 2 products</b>.', expected:`SELECT category, COUNT(*) FROM products GROUP BY category HAVING COUNT(*)>2`, ordered:false,
+    hints:['Group by category first.','Add HAVING COUNT(*) > 2.','SELECT category, COUNT(*) FROM products GROUP BY category HAVING COUNT(*) > 2'] },
+  boss:{type:'sql', prompt:'👑 GRAND BOSS — For each customer with a shipped order, show name and <b>total spent on shipped orders</b>, only those over <b>$1000</b>, highest first. (JOIN + WHERE + GROUP BY + HAVING + ORDER BY.)',
+    expected:`SELECT customers.name, SUM(orders.total) FROM customers JOIN orders ON customers.id=orders.customer_id WHERE orders.status='shipped' GROUP BY customers.id HAVING SUM(orders.total)>1000 ORDER BY SUM(orders.total) DESC`, ordered:true,
+    hints:['Join customers↔orders, filter status = shipped.','GROUP BY customer, SUM totals.','HAVING SUM > 1000, ORDER BY that sum DESC.',"SELECT customers.name, SUM(orders.total) FROM customers JOIN orders ON customers.id = orders.customer_id WHERE orders.status = 'shipped' GROUP BY customers.id HAVING SUM(orders.total) > 1000 ORDER BY SUM(orders.total) DESC"] }
+},
+{ id:'joins', title:'JOINS', em:'🔗', deps:['where'], imp:5, diff:'Hard', xp:80,
+  discover:`<p>Real data is split across tables. A <code>JOIN</code> <b>stitches them together</b> by matching a shared key — like <code>orders.customer_id = customers.id</code>.</p>
+  <div class="viz"><div class="flow-cols">
+   <span class="pill" style="background:rgba(40,224,255,.2)">orders</span><span class="arrow">⨝</span>
+   <span class="pill" style="background:rgba(124,92,255,.2)">customers</span><span class="arrow">→</span>
+   <span class="pill" style="background:rgba(63,240,168,.2)">order + buyer name</span></div></div>
+  <div class="callout">💡 <b>INNER JOIN</b> keeps only rows that match on both sides — the most-used JOIN by far.</div>`,
+  explore:{intro:`Joins reconstruct the full picture from normalized tables — turning IDs into names, orders into customers, line-items into products. Indispensable for support tickets.`,
+    examples:[
+      {label:'Order → buyer',query:'SELECT orders.id, customers.name, orders.total\nFROM orders JOIN customers ON orders.customer_id = customers.id;'},
+      {label:'Item → product',query:'SELECT order_items.order_id, products.name, order_items.quantity\nFROM order_items JOIN products ON order_items.product_id = products.id;'},
+      {label:'Three tables',query:'SELECT customers.name, products.name AS product\nFROM orders\nJOIN customers ON orders.customer_id = customers.id\nJOIN order_items ON orders.id = order_items.order_id\nJOIN products ON order_items.product_id = products.id;'}]},
+  practice:{type:'sql', prompt:"Show each order's <code>id</code> and the <b>customer name</b> who placed it.", expected:`SELECT orders.id, customers.name FROM orders JOIN customers ON orders.customer_id=customers.id`, ordered:false,
+    hints:['JOIN orders to customers.','Match ON orders.customer_id = customers.id.','SELECT orders.id, customers.name FROM orders JOIN customers ON orders.customer_id = customers.id'] },
+  master:{type:'sql', prompt:'For every order item, show <b>order_id, product name, and quantity</b>.', expected:`SELECT order_items.order_id, products.name, order_items.quantity FROM order_items JOIN products ON order_items.product_id=products.id`, ordered:false,
+    hints:['Join order_items to products on product_id = products.id.','SELECT order_items.order_id, products.name, order_items.quantity FROM order_items JOIN products ON order_items.product_id = products.id'] },
+  boss:{type:'sql', prompt:"⚔️ BOSS — List the <b>name</b> and order <b>total</b> for every customer who has a <code>shipped</code> order. (JOIN + WHERE.)", expected:`SELECT customers.name, orders.total FROM customers JOIN orders ON customers.id=orders.customer_id WHERE orders.status='shipped'`, ordered:false,
+    hints:['Join customers and orders.',"Filter WHERE orders.status = 'shipped'.","SELECT customers.name, orders.total FROM customers JOIN orders ON customers.id = orders.customer_id WHERE orders.status = 'shipped'"] },
+  elite:{type:'sql', prompt:'Show each product name and the <b>total quantity ever ordered</b> — including products never ordered (show 0). (LEFT JOIN + SUM + COALESCE.)', expected:`SELECT products.name, COALESCE(SUM(order_items.quantity),0) FROM products LEFT JOIN order_items ON products.id=order_items.product_id GROUP BY products.id`, ordered:false,
+    hints:['Start FROM products, LEFT JOIN order_items.','SUM the quantity, wrap in COALESCE(...,0).','GROUP BY products.id.','SELECT products.name, COALESCE(SUM(order_items.quantity),0) FROM products LEFT JOIN order_items ON products.id = order_items.product_id GROUP BY products.id'] }
+},
+{ id:'leftjoin', title:'LEFT JOIN', em:'🪢', deps:['joins'], imp:4, diff:'Hard', xp:70,
+  discover:`<p>A <code>LEFT JOIN</code> keeps <b>every row from the left table</b>, even with no match on the right (those columns come back <code>NULL</code>).</p>
+  <div class="callout">💡 Killer support use-case: find what's <b>missing</b> — customers with zero orders, products never sold, orphaned records.</div>`,
+  explore:{intro:`The difference between INNER and LEFT JOIN is exactly how you catch gaps in data — accounts with no activity, records with no parent.`,
+    examples:[
+      {label:'Orders per customer (incl. 0)',query:'SELECT customers.name, COUNT(orders.id) AS orders\nFROM customers LEFT JOIN orders ON customers.id = orders.customer_id\nGROUP BY customers.id;'},
+      {label:'Customers with NO orders',query:'SELECT customers.name\nFROM customers LEFT JOIN orders ON customers.id = orders.customer_id\nWHERE orders.id IS NULL;'}]},
+  practice:{type:'sql', prompt:'List every customer\'s <b>name</b> and how many orders they placed — <b>including those with 0</b>.', expected:`SELECT customers.name, COUNT(orders.id) FROM customers LEFT JOIN orders ON customers.id=orders.customer_id GROUP BY customers.id`, ordered:false,
+    hints:['FROM customers LEFT JOIN orders.','COUNT(orders.id) = 0 when none match.','GROUP BY customers.id.','SELECT customers.name, COUNT(orders.id) FROM customers LEFT JOIN orders ON customers.id = orders.customer_id GROUP BY customers.id'] }
+},
+{ id:'subqueries', title:'Subqueries', em:'🪆', deps:['where','aggregations'], imp:4, diff:'Hard', xp:90,
+  discover:`<p>A <b>subquery</b> is a query inside a query — its result feeds the outer one. Compare against an aggregate, or filter by another table's rows with <code>IN</code>.</p>
+  <div class="viz"><div class="flow-cols">
+   <span class="pill" style="background:rgba(124,92,255,.25)">(SELECT AVG(price)…)</span><span class="arrow">→</span>
+   <span class="pill" style="background:rgba(40,224,255,.2)">WHERE price &gt; that</span></div></div>
+  <div class="callout">💡 If you can't do it in one step, compute the inner answer first, then wrap it.</div>`,
+  explore:{intro:`Subqueries let you compare each row against a computed benchmark, or filter one table by what's in another. Foundational for "above average" and "exists / not exists" questions.`,
+    examples:[
+      {label:'Above average price',query:'SELECT name, price FROM products\nWHERE price > (SELECT AVG(price) FROM products);'},
+      {label:'Customers who ordered',query:'SELECT name FROM customers\nWHERE id IN (SELECT customer_id FROM orders);'},
+      {label:'Most expensive product',query:'SELECT name, price FROM products\nWHERE price = (SELECT MAX(price) FROM products);'}]},
+  practice:{type:'sql', prompt:'Find products that cost <b>more than the average</b> product price.', expected:`SELECT * FROM products WHERE price > (SELECT AVG(price) FROM products)`, ordered:false,
+    hints:['Put AVG(price) inside parentheses.','Compare price > that subquery.','SELECT * FROM products WHERE price > (SELECT AVG(price) FROM products)'] },
+  boss:{type:'sql', prompt:'⚔️ BOSS — Find the <b>names of customers who have never placed an order</b>. (Subquery + NOT IN.)', expected:`SELECT name FROM customers WHERE id NOT IN (SELECT customer_id FROM orders)`, ordered:false,
+    hints:['Get customer_ids that DO appear in orders.','Keep customers whose id is NOT IN that list.','SELECT name FROM customers WHERE id NOT IN (SELECT customer_id FROM orders)'] },
+  elite:{type:'sql', prompt:'Find products priced <b>above the average price of their own category</b>. (Correlated subquery.)', expected:`SELECT name FROM products p WHERE price > (SELECT AVG(price) FROM products WHERE category = p.category)`, ordered:false,
+    hints:['Alias the outer table (products p).','Inner query: AVG(price) WHERE category = p.category.','SELECT name FROM products p WHERE price > (SELECT AVG(price) FROM products WHERE category = p.category)'] }
+},
+/* ---------------- APPLICATION SUPPORT / ANALYTICS TRACK ---------------- */
+{ id:'nulls', title:'NULLs & COALESCE', em:'⬛', track:'support', deps:['where'], imp:5, diff:'Medium', xp:55,
+  discover:`<p><code>NULL</code> means <b>unknown / missing</b> — not zero, not empty string. It breaks normal comparisons: <code>email = NULL</code> never matches. Use <code>IS NULL</code> / <code>IS NOT NULL</code>.</p>
+  <p><code>COALESCE(a, b)</code> returns the first non-NULL value — perfect for default placeholders. <code>NULLIF(a,b)</code> returns NULL when a=b.</p>
+  <div class="callout">🛠️ Support reality: half your data-quality tickets are really NULL-handling bugs. Master this and you'll resolve them fast.</div>`,
+  explore:{intro:`Missing data is everywhere in production. These patterns let you find it, report it cleanly, and avoid the "= NULL returns nothing" trap.`,
+    examples:[
+      {label:'Find missing emails',query:'SELECT name FROM customers WHERE email IS NULL;'},
+      {label:'COALESCE default',query:"SELECT name, COALESCE(email,'no email on file') AS email FROM customers;"},
+      {label:'Coupon fallback',query:"SELECT id, COALESCE(coupon,'none') AS coupon FROM orders;"},
+      {label:'The =NULL trap (returns 0 rows!)',query:'SELECT name FROM customers WHERE email = NULL;'}]},
+  practice:{type:'sql', prompt:'Find the <b>names of customers who have no email</b> on file.', expected:`SELECT name FROM customers WHERE email IS NULL`, ordered:false,
+    hints:['Use IS NULL — not = NULL.','SELECT name FROM customers WHERE email IS NULL'] },
+  master:{type:'sql', prompt:"Show every customer's name and email, replacing any missing email with the text <code>'unknown'</code>.", expected:`SELECT name, COALESCE(email,'unknown') FROM customers`, ordered:false,
+    hints:["COALESCE(email,'unknown').","SELECT name, COALESCE(email,'unknown') FROM customers"] },
+  elite:{type:'sql', prompt:"Flag accounts to review: list names of customers whose email is <b>missing OR not a gmail address</b>.", expected:`SELECT name FROM customers WHERE email IS NULL OR email NOT LIKE '%gmail%'`, ordered:false,
+    hints:['Combine IS NULL with NOT LIKE using OR.',"SELECT name FROM customers WHERE email IS NULL OR email NOT LIKE '%gmail%'"] }
+},
+{ id:'caseexpr', title:'CASE Logic', em:'🔀', track:'support', deps:['select'], imp:5, diff:'Medium', xp:50,
+  discover:`<p><code>CASE</code> is SQL's if/else. It <b>maps values into buckets or labels</b> right inside a query — status codes into words, prices into tiers, flags into emojis.</p>
+  <div class="viz"><table class="data"><tr><th>price</th><th>tier</th></tr><tr><td>1200</td><td>premium</td></tr><tr><td>250</td><td>mid</td></tr><tr><td>5</td><td>budget</td></tr></table></div>
+  <div class="callout">🛠️ Indispensable for turning raw codes in logs/DB into human-readable support reports.</div>`,
+  explore:{intro:`CASE turns cryptic stored values into readable output and lets you bucket numbers — the backbone of clean status reports and tiered metrics.`,
+    examples:[
+      {label:'Price tiers',query:"SELECT name, price,\n  CASE WHEN price>=500 THEN 'premium'\n       WHEN price>=100 THEN 'mid'\n       ELSE 'budget' END AS tier\nFROM products;"},
+      {label:'Status → emoji',query:"SELECT id, status,\n  CASE status WHEN 'shipped' THEN '✅'\n              WHEN 'pending' THEN '⏳'\n              ELSE '❌' END AS flag\nFROM orders;"},
+      {label:'Count with CASE',query:"SELECT\n  SUM(CASE WHEN status='shipped' THEN 1 ELSE 0 END) AS shipped,\n  SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending\nFROM orders;"}]},
+  practice:{type:'sql', prompt:"For each product show its <code>name</code> and a label that is <b>'expensive'</b> when price &gt; 200, otherwise <b>'cheap'</b>.", expected:`SELECT name, CASE WHEN price>200 THEN 'expensive' ELSE 'cheap' END FROM products`, ordered:false,
+    hints:['CASE WHEN price > 200 THEN ... ELSE ... END.',"SELECT name, CASE WHEN price > 200 THEN 'expensive' ELSE 'cheap' END FROM products"] },
+  master:{type:'sql', prompt:"Show each order id with a status group: <b>'active'</b> for shipped or pending, <b>'inactive'</b> for anything else.", expected:`SELECT id, CASE WHEN status IN ('shipped','pending') THEN 'active' ELSE 'inactive' END FROM orders`, ordered:false,
+    hints:["Use CASE WHEN status IN ('shipped','pending') ...","SELECT id, CASE WHEN status IN ('shipped','pending') THEN 'active' ELSE 'inactive' END FROM orders"] },
+  elite:{type:'sql', prompt:"Count how many products fall in each price tier: <b>premium</b> (≥500), <b>mid</b> (100–499), <b>budget</b> (&lt;100). (CASE + GROUP BY.)", expected:`SELECT CASE WHEN price>=500 THEN 'premium' WHEN price>=100 THEN 'mid' ELSE 'budget' END AS tier, COUNT(*) FROM products GROUP BY tier`, ordered:false,
+    hints:['Put the CASE in SELECT and give it an alias.','GROUP BY that alias.',"SELECT CASE WHEN price>=500 THEN 'premium' WHEN price>=100 THEN 'mid' ELSE 'budget' END AS tier, COUNT(*) FROM products GROUP BY tier"] }
+},
+{ id:'text', title:'Text & Patterns', em:'🔤', track:'support', deps:['where'], imp:4, diff:'Medium', xp:55,
+  discover:`<p>Text functions search and reshape strings — vital for parsing emails, log lines, names and IDs. <code>LIKE</code> with <code>%</code> (any chars) and <code>_</code> (one char) does pattern matching; <code>LOWER()</code>/<code>UPPER()</code> make it case-insensitive; <code>||</code> concatenates; <code>SUBSTR</code>/<code>INSTR</code> slice.</p>
+  <div class="callout">🛠️ "Find every record where the email domain is X" or "names containing Y" — daily support work.</div>`,
+  explore:{intro:`Pattern matching is how you locate the exact records behind a fuzzy ticket ("something with 'gmail'", "starts with A"). Case-insensitive search avoids false misses.`,
+    examples:[
+      {label:'Contains gmail',query:"SELECT name, email FROM customers WHERE email LIKE '%gmail%';"},
+      {label:"Starts with 'A'",query:"SELECT name FROM customers WHERE name LIKE 'A%';"},
+      {label:'Concatenate',query:"SELECT name || ' (' || country || ')' AS who FROM customers;"},
+      {label:'Case-insensitive',query:"SELECT * FROM products WHERE LOWER(category) = 'electronics';"},
+      {label:'Extract email domain',query:"SELECT name, SUBSTR(email, INSTR(email,'@')+1) AS domain\nFROM customers WHERE email IS NOT NULL;"}]},
+  practice:{type:'sql', prompt:"Find all customers whose email is a <b>gmail</b> address (contains the text 'gmail').", expected:`SELECT * FROM customers WHERE email LIKE '%gmail%'`, ordered:false,
+    hints:["Use LIKE '%gmail%'.","SELECT * FROM customers WHERE email LIKE '%gmail%'"] },
+  master:{type:'sql', prompt:"List product <code>name</code>s that contain the letter <b>'o'</b> (case-insensitive).", expected:`SELECT name FROM products WHERE LOWER(name) LIKE '%o%'`, ordered:false,
+    hints:["Lower-case the column, then LIKE '%o%'.","SELECT name FROM products WHERE LOWER(name) LIKE '%o%'"] },
+  elite:{type:'sql', prompt:"For every customer who has an email, show their <b>name</b> and the <b>domain</b> (the text after the @). (SUBSTR + INSTR.)", expected:`SELECT name, SUBSTR(email, INSTR(email,'@')+1) FROM customers WHERE email IS NOT NULL`, ordered:false,
+    hints:["INSTR(email,'@') finds the @ position.",'SUBSTR(email, that + 1) takes everything after it.',"SELECT name, SUBSTR(email, INSTR(email,'@')+1) FROM customers WHERE email IS NOT NULL"] }
+},
+{ id:'dates', title:'Dates & Time', em:'📅', track:'support', deps:['where'], imp:4, diff:'Medium', xp:55,
+  discover:`<p>Dates here are text in <code>'YYYY-MM-DD'</code> form, so they compare and sort correctly as strings. Use <code>BETWEEN</code> for ranges and <code>strftime('%Y'/'%m'/'%d', col)</code> to pull out parts.</p>
+  <div class="callout">🛠️ Incident windows, "what happened on date X", month-over-month trends — all date filtering. The most common support time-box.</div>`,
+  explore:{intro:`Almost every support investigation is time-boxed ("between 2pm and 4pm yesterday"). These patterns slice and bucket by time.`,
+    examples:[
+      {label:'March orders',query:"SELECT * FROM orders WHERE order_date BETWEEN '2024-03-01' AND '2024-03-31';"},
+      {label:'Extract month',query:"SELECT id, order_date, strftime('%m', order_date) AS month FROM orders;"},
+      {label:'Orders per month',query:"SELECT strftime('%m', order_date) AS month, COUNT(*) AS n\nFROM orders GROUP BY month;"},
+      {label:'Most recent first',query:'SELECT * FROM orders ORDER BY order_date DESC;'}]},
+  practice:{type:'sql', prompt:"Find all orders placed in <b>April 2024</b> (between 2024-04-01 and 2024-04-30).", expected:`SELECT * FROM orders WHERE order_date BETWEEN '2024-04-01' AND '2024-04-30'`, ordered:false,
+    hints:["Use BETWEEN with the two date strings.","SELECT * FROM orders WHERE order_date BETWEEN '2024-04-01' AND '2024-04-30'"] },
+  master:{type:'sql', prompt:"Count how many orders were placed in <b>each month</b>. Show the month and the count.", expected:`SELECT strftime('%m', order_date) AS month, COUNT(*) FROM orders GROUP BY month`, ordered:false,
+    hints:["strftime('%m', order_date) gives the month.",'GROUP BY it.',"SELECT strftime('%m', order_date) AS month, COUNT(*) FROM orders GROUP BY month"] },
+  elite:{type:'sql', prompt:"For each customer, show their <b>name</b> and the <b>date of their most recent order</b>. (JOIN + MAX + GROUP BY.)", expected:`SELECT customers.name, MAX(orders.order_date) FROM customers JOIN orders ON customers.id=orders.customer_id GROUP BY customers.id`, ordered:false,
+    hints:['Join customers↔orders, GROUP BY customer.','MAX(order_date) is the latest.','SELECT customers.name, MAX(orders.order_date) FROM customers JOIN orders ON customers.id = orders.customer_id GROUP BY customers.id'] }
+},
+{ id:'unionnode', title:'UNION', em:'➕', track:'support', deps:['select'], imp:3, diff:'Medium', xp:45,
+  discover:`<p><code>UNION</code> stacks the rows of two queries into one result (both must have the same number of columns). <code>UNION</code> removes duplicates; <code>UNION ALL</code> keeps them (and is faster).</p>
+  <div class="callout">🛠️ Combine data from multiple sources/tables into one report — e.g. merge "current" and "archived" records, or tag rows by origin.</div>`,
+  explore:{intro:`When the data you need spans two queries or tables, UNION glues them vertically. Add a constant column to label each row's source.`,
+    examples:[
+      {label:'Merge names',query:'SELECT name FROM customers\nUNION\nSELECT name FROM products;'},
+      {label:'Labelled sources',query:"SELECT name, 'customer' AS type FROM customers\nUNION ALL\nSELECT name, 'product' FROM products;"},
+      {label:'Cities + countries',query:'SELECT city FROM customers\nUNION\nSELECT country FROM customers;'}]},
+  practice:{type:'sql', prompt:'Produce <b>one single-column list</b> of all distinct cities and countries from customers.', expected:`SELECT city FROM customers UNION SELECT country FROM customers`, ordered:false,
+    hints:['UNION two SELECTs, each one column.','SELECT city FROM customers UNION SELECT country FROM customers'] },
+  master:{type:'sql', prompt:"Build one list tagging each row: customer names tagged <b>'C'</b>, product names tagged <b>'P'</b> (keep duplicates).", expected:`SELECT name, 'C' FROM customers UNION ALL SELECT name, 'P' FROM products`, ordered:false,
+    hints:['Add a constant second column to each SELECT.','Use UNION ALL to keep all rows.',"SELECT name, 'C' FROM customers UNION ALL SELECT name, 'P' FROM products"] }
+},
+{ id:'dupes', title:'Find Duplicates', em:'👯', track:'support', deps:['groupby'], imp:5, diff:'Hard', xp:65,
+  discover:`<p>The classic data-quality query: <code>GROUP BY key HAVING COUNT(*) &gt; 1</code> finds <b>values that appear more than once</b> — duplicate emails, repeated IDs, double-submitted orders.</p>
+  <div class="callout">🛠️ This single pattern resolves a huge share of "why are there two of these?" support tickets. Memorize it.</div>`,
+  explore:{intro:`Duplicates cause double-charges, broken joins and inflated counts. GROUP BY ... HAVING COUNT(*) > 1 is the universal "find the repeats" tool.`,
+    examples:[
+      {label:'Countries shared by many',query:'SELECT country, COUNT(*) AS n FROM customers GROUP BY country HAVING COUNT(*) > 1;'},
+      {label:'Products in many orders',query:'SELECT product_id, COUNT(*) AS times FROM order_items GROUP BY product_id HAVING COUNT(*) > 1;'},
+      {label:'Coupons reused',query:'SELECT coupon, COUNT(*) AS uses FROM orders WHERE coupon IS NOT NULL GROUP BY coupon HAVING COUNT(*) > 1;'}]},
+  practice:{type:'sql', prompt:'Find <b>countries shared by more than one customer</b>.', expected:`SELECT country FROM customers GROUP BY country HAVING COUNT(*)>1`, ordered:false,
+    hints:['GROUP BY country.','HAVING COUNT(*) > 1.','SELECT country FROM customers GROUP BY country HAVING COUNT(*) > 1'] },
+  master:{type:'sql', prompt:'Find <b>product_ids that appear in more than one order item</b>, with their count.', expected:`SELECT product_id, COUNT(*) FROM order_items GROUP BY product_id HAVING COUNT(*)>1`, ordered:false,
+    hints:['Group order_items by product_id.','HAVING COUNT(*) > 1.','SELECT product_id, COUNT(*) FROM order_items GROUP BY product_id HAVING COUNT(*) > 1'] }
+},
+{ id:'windows', title:'Window Functions', em:'🪟', track:'support', deps:['groupby'], imp:4, diff:'Hard', xp:85,
+  discover:`<p>Window functions compute across a set of rows <b>without collapsing them</b> — unlike GROUP BY, every row survives. Use <code>OVER()</code> with <code>ROW_NUMBER</code>, <code>RANK</code>, running <code>SUM</code>, and <code>PARTITION BY</code> to compute per-group.</p>
+  <div class="callout">🛠️ "Top N per category", running totals, rankings, "latest record per user" — analytics power moves that are awkward without windows.</div>`,
+  explore:{intro:`Windows give you rankings and running calculations alongside the original rows — the engine behind leaderboards, top-N-per-group, and time-series running totals.`,
+    examples:[
+      {label:'Rank by price',query:'SELECT name, price, RANK() OVER (ORDER BY price DESC) AS rnk FROM products;'},
+      {label:'Running revenue',query:'SELECT id, total, SUM(total) OVER (ORDER BY id) AS running FROM orders;'},
+      {label:'Rank within category',query:'SELECT name, category, price,\n  ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn\nFROM products;'}]},
+  practice:{type:'sql', prompt:'Rank all products by price, highest first. Show <code>name</code>, <code>price</code>, and the rank, ordered by price descending.', expected:`SELECT name, price, RANK() OVER (ORDER BY price DESC) AS rnk FROM products ORDER BY price DESC`, ordered:true,
+    hints:['RANK() OVER (ORDER BY price DESC).','Also ORDER BY price DESC for the final output.','SELECT name, price, RANK() OVER (ORDER BY price DESC) AS rnk FROM products ORDER BY price DESC'] },
+  master:{type:'sql', prompt:'Within each category, number products from most to least expensive (1 = priciest). Show category, name, and that number.', expected:`SELECT category, name, ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn FROM products`, ordered:false,
+    hints:['ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC).','SELECT category, name, ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn FROM products'] },
+  elite:{type:'sql', prompt:'Return only the <b>most expensive product in each category</b> — name, category, price. (Window inside a subquery, keep rank 1.)', expected:`SELECT name, category, price FROM (SELECT name, category, price, ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn FROM products) WHERE rn=1`, ordered:false,
+    hints:['Compute ROW_NUMBER per category in a subquery.','Wrap it and filter WHERE rn = 1.','SELECT name, category, price FROM (SELECT name, category, price, ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn FROM products) WHERE rn = 1'] }
+},
+{ id:'cte', title:'CTEs (WITH)', em:'🧩', track:'support', deps:['subqueries'], imp:4, diff:'Hard', xp:75,
+  discover:`<p>A <b>CTE</b> (Common Table Expression) names a query with <code>WITH x AS (…)</code> so you can reference it like a table. It turns a tangled nested query into <b>readable, debuggable steps</b>.</p>
+  <div class="callout">🛠️ When a support query gets complex, break it into named CTEs — far easier to read, test piece by piece, and hand off.</div>`,
+  explore:{intro:`CTEs are how you keep complex investigative queries sane: compute an intermediate result, name it, then build on it. You can even chain several.`,
+    examples:[
+      {label:'Filter then group',query:'WITH big AS (SELECT * FROM products WHERE price > 200)\nSELECT category, COUNT(*) AS n FROM big GROUP BY category;'},
+      {label:'Chained CTE + join',query:'WITH cust_orders AS (\n  SELECT customer_id, COUNT(*) AS n FROM orders GROUP BY customer_id)\nSELECT customers.name, cust_orders.n\nFROM customers JOIN cust_orders ON customers.id = cust_orders.customer_id;'}]},
+  practice:{type:'sql', prompt:'Using a CTE named <code>big_products</code> holding products priced over 200, count how many there are <b>per category</b>.', expected:`WITH big_products AS (SELECT * FROM products WHERE price>200) SELECT category, COUNT(*) FROM big_products GROUP BY category`, ordered:false,
+    hints:['WITH big_products AS (SELECT * FROM products WHERE price > 200)','Then SELECT category, COUNT(*) FROM big_products GROUP BY category.','WITH big_products AS (SELECT * FROM products WHERE price > 200) SELECT category, COUNT(*) FROM big_products GROUP BY category'] },
+  master:{type:'sql', prompt:"Use a CTE of each customer's order count, then list every customer's <b>name and count (0 if none)</b>.", expected:`WITH oc AS (SELECT customer_id, COUNT(*) AS n FROM orders GROUP BY customer_id) SELECT customers.name, COALESCE(oc.n,0) FROM customers LEFT JOIN oc ON customers.id=oc.customer_id`, ordered:false,
+    hints:['CTE: SELECT customer_id, COUNT(*) AS n FROM orders GROUP BY customer_id.','LEFT JOIN customers to it, COALESCE(n,0).','WITH oc AS (SELECT customer_id, COUNT(*) AS n FROM orders GROUP BY customer_id) SELECT customers.name, COALESCE(oc.n,0) FROM customers LEFT JOIN oc ON customers.id = oc.customer_id'] }
+},
+{ id:'indexes', title:'Indexes', em:'⚡', track:'support', deps:['where'], imp:4, diff:'Medium', xp:60,
+  discover:`<p>An <b>index</b> is like a book's index — instead of scanning every row to find <code>WHERE id = 7</code>, the database jumps straight there. The #1 fix for slow queries.</p>
+  <div class="viz"><div class="flow-cols">
+   <span class="pill" style="background:rgba(255,93,122,.2)">No index: scan all rows</span><span class="arrow">vs</span>
+   <span class="pill" style="background:rgba(63,240,168,.2)">Index: seek to one</span></div></div>
+  <div class="callout">🛠️ Index the columns you filter and join on most. Trade-off: faster reads, slightly slower writes. <code>EXPLAIN QUERY PLAN</code> reveals scans vs seeks.</div>`,
+  explore:{intro:`Performance tickets start with "why is this slow?". EXPLAIN QUERY PLAN shows whether SQLite scans the whole table or seeks via an index.`,
+    examples:[
+      {label:'See the query plan',query:'EXPLAIN QUERY PLAN SELECT * FROM orders WHERE id = 7;'},
+      {label:'Create an index',query:'CREATE INDEX IF NOT EXISTS idx_status ON orders(status);'},
+      {label:'Plan after indexing',query:"EXPLAIN QUERY PLAN SELECT * FROM orders WHERE status = 'shipped';"}]},
+  practice:{type:'sql', prompt:'Write the kind of pinpoint lookup an index accelerates: find the order with <code>id = 7</code>.', expected:`SELECT * FROM orders WHERE id=7`, ordered:false,
+    hints:['A simple WHERE on id.','SELECT * FROM orders WHERE id = 7'] },
+  master:{type:'quiz', prompt:'Why does an index speed up <code>WHERE id = 7</code>?',
+    options:['It sorts the whole table alphabetically every time','It lets the database jump straight to matching rows instead of scanning every row','It compresses the table to save disk','It copies the entire database into RAM'],
+    answer:1, hints:['Think of the index at the back of a book.'] }
+},
+{ id:'transactions', title:'Transactions', em:'🔒', track:'support', deps:['indexes'], imp:4, diff:'Hard', xp:60,
+  discover:`<p>A <b>transaction</b> groups changes into one all-or-nothing unit. <code>BEGIN</code> … <code>COMMIT</code> saves; <code>ROLLBACK</code> undoes everything if anything fails.</p>
+  <div class="viz"><div class="flow-cols">
+   <span class="pill" style="background:rgba(40,224,255,.2)">BEGIN</span><span class="arrow">→</span>
+   <span class="pill" style="background:rgba(124,92,255,.2)">UPDATE…</span><span class="arrow">→</span>
+   <span class="pill" style="background:rgba(255,93,122,.2)">error!</span><span class="arrow">→</span>
+   <span class="pill" style="background:rgba(63,240,168,.2)">ROLLBACK = no harm</span></div></div>
+  <div class="callout">🛠️ ACID = <b>A</b>tomicity, <b>C</b>onsistency, <b>I</b>solation, <b>D</b>urability — why a half-finished payment never leaves the system in a broken state. Core to diagnosing "stuck" or partial-update incidents.</div>`,
+  explore:{intro:`You'll rarely write transactions in ad-hoc support queries, but you must understand them to diagnose partial updates, locks, and "it half-worked" incidents. Here's the order state a transaction protects.`,
+    examples:[
+      {label:'Order counts by status',query:'SELECT status, COUNT(*) AS n FROM orders GROUP BY status;'},
+      {label:'Pending (at-risk) orders',query:"SELECT * FROM orders WHERE status = 'pending';"}]},
+  practice:{type:'quiz', prompt:'You run two UPDATEs inside a transaction. The second fails, so you ROLLBACK. What happens to the first UPDATE?',
+    options:['It stays applied — only the failed one is undone','It is undone too — the database returns to the state before BEGIN','Half of it is kept','The whole database is wiped'],
+    answer:1, hints:['"All-or-nothing" = Atomicity.'] },
+  master:{type:'quiz', prompt:'Which ACID property guarantees a transaction either fully completes or has no effect at all?',
+    options:['Atomicity','Consistency','Isolation','Durability'],
+    answer:0, hints:['The "all-or-nothing" guarantee.'] }
+},
+{ id:'diagnostics', title:'Troubleshooting', em:'🩺', track:'support', deps:['indexes','dupes'], imp:5, diff:'Boss', xp:100,
+  discover:`<p>The capstone: thinking like an <b>application support engineer</b>. Reproduce the issue, inspect the data, check for gaps and dupes, verify counts, and narrow to root cause — using every skill in the tree.</p>
+  <div class="callout">🛠️ A great support query answers "is the data wrong, or is the app wrong?" Audits like orphan rows, missing references, and revenue reconciliation live here.</div>`,
+  explore:{intro:`Real diagnostics combine joins, NULL-checks, aggregates and EXPLAIN. These are the audit queries you'll reach for on live incidents.`,
+    examples:[
+      {label:'Query plan',query:'EXPLAIN QUERY PLAN SELECT * FROM orders WHERE customer_id = 2;'},
+      {label:'Orphan line-items',query:'SELECT * FROM order_items WHERE product_id NOT IN (SELECT id FROM products);'},
+      {label:'Row-count sanity check',query:"SELECT 'customers' AS tbl, COUNT(*) AS rows FROM customers\nUNION ALL SELECT 'orders', COUNT(*) FROM orders\nUNION ALL SELECT 'order_items', COUNT(*) FROM order_items;"},
+      {label:'Revenue reconciliation',query:'SELECT status, COUNT(*) AS n, SUM(total) AS revenue FROM orders GROUP BY status;'}]},
+  practice:{type:'sql', prompt:'🩺 Ticket: "possible junk/test accounts". Find the <b>names of customers who have never placed an order AND have no email</b>.', expected:`SELECT name FROM customers WHERE id NOT IN (SELECT customer_id FROM orders) AND email IS NULL`, ordered:false,
+    hints:['Two conditions with AND.','id NOT IN (subquery of order customer_ids) … AND email IS NULL.','SELECT name FROM customers WHERE id NOT IN (SELECT customer_id FROM orders) AND email IS NULL'] },
+  boss:{type:'sql', prompt:'👑 GRAND BOSS — Build a health report: for each order <b>status</b>, show the <b>count</b> and <b>total revenue</b>, only statuses with more than one order, highest revenue first.', expected:`SELECT status, COUNT(*), SUM(total) FROM orders GROUP BY status HAVING COUNT(*)>1 ORDER BY SUM(total) DESC`, ordered:true,
+    hints:['GROUP BY status, COUNT(*) and SUM(total).','HAVING COUNT(*) > 1, ORDER BY SUM(total) DESC.','SELECT status, COUNT(*), SUM(total) FROM orders GROUP BY status HAVING COUNT(*) > 1 ORDER BY SUM(total) DESC'] },
+  elite:{type:'sql', prompt:'Identify the <b>single top-spending customer</b> — return just their name and total spend. (JOIN + GROUP BY + ORDER BY + LIMIT.)', expected:`SELECT customers.name, SUM(orders.total) AS spend FROM customers JOIN orders ON customers.id=orders.customer_id GROUP BY customers.id ORDER BY spend DESC LIMIT 1`, ordered:true,
+    hints:['Sum each customer\'s totals, order DESC, LIMIT 1.','SELECT customers.name, SUM(orders.total) AS spend FROM customers JOIN orders ON customers.id = orders.customer_id GROUP BY customers.id ORDER BY spend DESC LIMIT 1'] }
+}
+] },
+  databricks:{ themeClass:'theme-dbx', mark:'🧱', title:'DATABRICKS ASCENDANT', small:'LAKEHOUSE',
+        legend:'🖱️ Drag · Scroll to zoom · 🔵 SQL · 🔴 Delta · 🟠 PySpark · 🟢 Platform',
+        grad:['#ff6b3d','#ff3621'], saveKey:'databricksAscendant_v1',
+        engineNote:'Runs live on the embedded engine (approximates Spark SQL).',
+        tables:'customers · products · orders · order_items',
+        SCHEMA:`
+CREATE TABLE customers(c_id INTEGER, name TEXT, country TEXT, signup_date TEXT, segment TEXT, email TEXT);
+INSERT INTO customers VALUES
+(1,'Aisha','Pakistan','2024-01-15','retail','aisha@gmail.com'),
+(2,'Bilal','Pakistan','2024-02-20','retail','bilal@yahoo.com'),
+(3,'Chen','China','2024-01-30','wholesale','chen@gmail.com'),
+(4,'Diana','UK','2024-03-05','retail','diana@outlook.com'),
+(5,'Emir','Turkey','2024-02-11','wholesale','emir@gmail.com'),
+(6,'Farah','UAE','2024-04-01','retail','farah@corp.com'),
+(7,'Gabriel','Spain','2024-05-20','wholesale',NULL);
+
+CREATE TABLE products(p_id INTEGER, name TEXT, category TEXT, price REAL);
+INSERT INTO products VALUES
+(1,'Laptop','Electronics',1200),(2,'Phone','Electronics',800),
+(3,'Desk','Furniture',300),(4,'Chair','Furniture',150),
+(5,'Notebook','Stationery',5),(6,'Pen','Stationery',2),
+(7,'Monitor','Electronics',250),(8,'Lamp','Furniture',40);
+
+CREATE TABLE orders(o_id INTEGER, c_id INTEGER, order_ts TEXT, amount REAL, status TEXT);
+INSERT INTO orders VALUES
+(1,1,'2024-03-01 09:12:00',1450,'shipped'),
+(2,1,'2024-03-15 14:03:00',800,'shipped'),
+(3,2,'2024-03-20 11:00:00',305,'pending'),
+(4,3,'2024-04-02 16:30:00',250,'shipped'),
+(5,4,'2024-04-10 08:45:00',150,'cancelled'),
+(6,5,'2024-04-15 19:20:00',47,'shipped'),
+(7,2,'2024-05-01 12:00:00',1200,'shipped'),
+(8,6,'2024-05-05 10:10:00',290,'pending');
+
+CREATE TABLE order_items(oi_id INTEGER, o_id INTEGER, p_id INTEGER, qty INTEGER);
+INSERT INTO order_items VALUES
+(1,1,1,1),(2,1,7,1),(3,2,2,1),(4,3,3,1),(5,3,5,1),
+(6,4,7,1),(7,5,4,1),(8,6,8,1),(9,6,5,1),(10,6,6,1),(11,7,1,1),(12,8,7,1),(13,8,8,1);
+`,
+        ACHIEVEMENTS:[
+  {id:'firstquery', ic:'⚡', name:'Hello, Lakehouse', desc:'Run your first query'},
+  {id:'firstblood', ic:'🩸', name:'First Blood', desc:'Solve your first challenge'},
+  {id:'speed', ic:'🚀', name:'Speed Demon', desc:'Solve 5 challenges first-try, no hints'},
+  {id:'combo', ic:'🔥', name:'On Fire', desc:'Hit a 5-solve combo streak'},
+  {id:'boss', ic:'⚔️', name:'Boss Slayer', desc:'Defeat any boss fight'},
+  {id:'elite', ic:'💎', name:'Elite Operator', desc:'Beat an Elite challenge (High mode)'},
+  {id:'delta', ic:'🔺', name:'Delta Diver', desc:'Master 3 Delta Lake nodes'},
+  {id:'platform', ic:'🛠️', name:'Ops Ready', desc:'Master 3 platform/ops nodes'},
+  {id:'half', ic:'🌓', name:'Halfway Hero', desc:'Master 50% of the tree'},
+  {id:'grandboss', ic:'👑', name:'Grand Champion', desc:'Defeat the Grand Boss'},
+  {id:'allnodes', ic:'🧠', name:'Lakehouse Sage', desc:'Master every node'},
+  {id:'explorer', ic:'🧪', name:'Tinkerer', desc:'Run 12 queries in the sandbox'}
+],
+        NODES:[
+{ id:'lakehouse', title:'Lakehouse 101', em:'🏞️', track:'sql', deps:[], imp:5, diff:'Novice', xp:20,
+  discover:`<p>The <b>Lakehouse</b> = a data lake's cheap, open storage + a data warehouse's reliability and speed, on one platform. Databricks built it; <b>Delta Lake</b> is its default table format, giving you ACID transactions on files in cloud storage.</p>
+  <div class="viz"><div class="flow-cols">
+    <span class="pill" style="background:rgba(70,179,255,.2)">Open files (Parquet)</span><span class="arrow">+</span>
+    <span class="pill" style="background:rgba(255,93,122,.2)">Delta transaction log</span><span class="arrow">=</span>
+    <span class="pill" style="background:rgba(63,240,168,.2)">Lakehouse: SQL · ETL · ML</span></div></div>
+  <div class="callout">🛠️ For support: nearly every object you'll troubleshoot is a Delta table queried with Spark SQL. This tree builds from there.</div>`,
+  explore:{intro:`The sandbox below runs an embedded SQL engine that approximates <b>Spark SQL</b>. Run this to meet the sample lakehouse tables you'll use all game.`,
+    examples:[
+      {label:'All customers',query:'SELECT * FROM customers;'},
+      {label:'All orders',query:'SELECT * FROM orders;'},
+      {label:'All products',query:'SELECT * FROM products;'}]},
+  practice:{type:'quiz', prompt:'What does a <b>lakehouse</b> combine?', options:['Two separate data warehouses','Cheap open data-lake storage with warehouse-grade reliability and performance','Only machine learning tools','A spreadsheet and a database'], answer:1, hints:['Lake + warehouse, hence the name.'] },
+  master:{type:'quiz', prompt:'What is the <b>default table format</b> in Databricks?', options:['CSV','Plain Parquet','Delta Lake','JSON'], answer:2, hints:['It adds ACID on top of Parquet.'] }
+},
+{ id:'catalogs', title:'Catalogs & Tables', em:'🗂️', track:'sql', deps:['lakehouse'], imp:5, diff:'Novice', xp:25,
+  discover:`<p>Unity Catalog uses a <b>three-level namespace</b>: <code>catalog.schema.table</code> — e.g. <code>main.sales.customers</code>. <code>SHOW TABLES</code> lists what's in a schema; <code>DESCRIBE</code> shows columns.</p>
+  <div class="viz"><div class="flow-cols">
+   <span class="pill" style="background:rgba(255,54,33,.2)">main</span><span class="arrow">.</span>
+   <span class="pill" style="background:rgba(255,157,74,.2)">sales</span><span class="arrow">.</span>
+   <span class="pill" style="background:rgba(70,179,255,.2)">customers</span></div></div>
+  <div class="callout">🛠️ "Table not found" tickets are often a wrong catalog/schema prefix. Knowing the namespace is half the fix.</div>`,
+  explore:{intro:`In the sandbox we use plain names; in Databricks you'd qualify them as <code>catalog.schema.table</code>. Query the sample tables here.`,
+    examples:[
+      {label:'Customers',query:'SELECT * FROM customers;'},
+      {label:'Name + country',query:'SELECT name, country FROM customers;'},
+      {label:'Count by segment',query:'SELECT segment, COUNT(*) AS n FROM customers GROUP BY segment;'}]},
+  practice:{type:'sql', prompt:'Return the <code>name</code> and <code>country</code> of every customer.', expected:`SELECT name, country FROM customers`, ordered:false,
+    hints:['SELECT the two columns from customers.','SELECT name, country FROM customers'] },
+  master:{type:'quiz', prompt:'In Unity Catalog, which is the correct fully-qualified table reference?', options:['schema.table.catalog','catalog.schema.table','database.table','table@catalog'], answer:1, hints:['Three levels, top-down.'] }
+},
+{ id:'sparksql', title:'Spark SQL', em:'🎯', track:'sql', deps:['catalogs'], imp:5, diff:'Easy', xp:30,
+  discover:`<p>Databricks SQL <b>is ANSI SQL</b> running on Spark. <code>SELECT cols FROM table</code>, alias with <code>AS</code>, compute new columns inline. If you know SQL, you already know most of Databricks SQL.</p>
+  <div class="callout">💡 80/20: <code>SELECT … FROM …</code> plus filters and grouping answers the majority of support and analytics questions.</div>`,
+  explore:{intro:`Read columns, rename them, and derive new ones — the everyday moves for ad-hoc data checks.`,
+    examples:[
+      {label:'Aliases',query:'SELECT name AS product, price AS cost FROM products;'},
+      {label:'Derived column',query:'SELECT name, price, price * 1.15 AS price_with_tax FROM products;'},
+      {label:'String function',query:'SELECT upper(name) AS shouty, country FROM customers;'}]},
+  practice:{type:'sql', prompt:'Select the <code>name</code> and <code>price</code> of all products.', expected:`SELECT name, price FROM products`, ordered:false,
+    hints:['SELECT both columns from products.','SELECT name, price FROM products'] },
+  master:{type:'sql', prompt:'Show each product name and its price <b>plus 10%</b> as a derived column.', expected:`SELECT name, price * 1.1 FROM products`, ordered:false,
+    hints:['Multiply price by 1.1 in the SELECT list.','SELECT name, price * 1.1 FROM products'] }
+},
+{ id:'filtering', title:'Filtering (WHERE)', em:'🔍', track:'sql', deps:['sparksql'], imp:5, diff:'Easy', xp:40,
+  discover:`<p><code>WHERE</code> keeps only matching rows — how you isolate the data behind a ticket. Operators: <code>=</code> <code>&gt;</code> <code>&lt;</code> <code>!=</code>, plus <code>AND</code> <code>OR</code> <code>IN</code> <code>BETWEEN</code> <code>LIKE</code>. Strings in <code>'single quotes'</code>.</p>`,
+  explore:{intro:`Narrow to one category, one status, one price band — exactly what you do when reproducing an issue.`,
+    examples:[
+      {label:'By category',query:"SELECT * FROM products WHERE category = 'Electronics';"},
+      {label:'AND condition',query:"SELECT * FROM products WHERE category = 'Furniture' AND price < 200;"},
+      {label:'Status IN list',query:"SELECT * FROM orders WHERE status IN ('pending','cancelled');"}]},
+  practice:{type:'sql', prompt:"Find all products in the <code>Electronics</code> category.", expected:`SELECT * FROM products WHERE category='Electronics'`, ordered:false,
+    hints:['Add WHERE with the category.',"SELECT * FROM products WHERE category = 'Electronics'"] },
+  master:{type:'sql', prompt:'Find products that cost <b>more than 200</b>.', expected:`SELECT * FROM products WHERE price>200`, ordered:false,
+    hints:['Use > on price.','SELECT * FROM products WHERE price > 200'] },
+  elite:{type:'sql', prompt:'Find products that are <b>Electronics over $500 OR Furniture under $200</b>.', expected:`SELECT * FROM products WHERE (category='Electronics' AND price>500) OR (category='Furniture' AND price<200)`, ordered:false,
+    hints:['Two grouped conditions joined by OR.',"SELECT * FROM products WHERE (category='Electronics' AND price>500) OR (category='Furniture' AND price<200)"] }
+},
+{ id:'aggregations', title:'Aggregations', em:'➗', track:'sql', deps:['sparksql'], imp:5, diff:'Medium', xp:50,
+  discover:`<p>Aggregates collapse rows into metrics: <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>. Add <code>GROUP BY</code> to compute them <b>per bucket</b> — sales per category, orders per customer.</p>
+  <div class="viz"><table class="data"><tr><th>category</th><th>COUNT(*)</th></tr><tr><td>Electronics</td><td>3</td></tr><tr><td>Furniture</td><td>3</td></tr><tr><td>Stationery</td><td>2</td></tr></table></div>`,
+  explore:{intro:`Aggregation turns a raw table into the summary numbers behind every dashboard and status report.`,
+    examples:[
+      {label:'Multi-metric',query:'SELECT COUNT(*) AS items, AVG(price) AS avg_price, MAX(price) AS top FROM products;'},
+      {label:'Per category',query:'SELECT category, COUNT(*) AS n, SUM(price) AS total FROM products GROUP BY category;'},
+      {label:'Revenue by status',query:'SELECT status, COUNT(*) AS n, SUM(amount) AS revenue FROM orders GROUP BY status;'}]},
+  practice:{type:'sql', prompt:'Count how many customers there are (a single number).', expected:`SELECT COUNT(*) FROM customers`, ordered:false,
+    hints:['Use COUNT(*).','SELECT COUNT(*) FROM customers'] },
+  master:{type:'sql', prompt:'Count how many products are in <b>each category</b>.', expected:`SELECT category, COUNT(*) FROM products GROUP BY category`, ordered:false,
+    hints:['SELECT category + COUNT(*), then GROUP BY category.','SELECT category, COUNT(*) FROM products GROUP BY category'] },
+  boss:{type:'sql', prompt:'⚔️ BOSS — Count products priced <b>over $100</b> in each category. (WHERE + GROUP BY.)', expected:`SELECT category, COUNT(*) FROM products WHERE price>100 GROUP BY category`, ordered:false,
+    hints:['Filter WHERE price > 100, then GROUP BY category.','SELECT category, COUNT(*) FROM products WHERE price > 100 GROUP BY category'] },
+  elite:{type:'sql', prompt:'Show each category with its count and average price — only categories whose <b>average price exceeds 100</b>.', expected:`SELECT category, COUNT(*), AVG(price) FROM products GROUP BY category HAVING AVG(price)>100`, ordered:false,
+    hints:['HAVING AVG(price) > 100 after the GROUP BY.','SELECT category, COUNT(*), AVG(price) FROM products GROUP BY category HAVING AVG(price) > 100'] }
+},
+{ id:'joins', title:'Joins', em:'🔗', track:'sql', deps:['filtering'], imp:5, diff:'Hard', xp:80,
+  discover:`<p>A <code>JOIN</code> stitches tables together on a shared key — turning IDs into names. <b>INNER JOIN</b> keeps only matches; <b>LEFT JOIN</b> keeps all left rows (right side <code>NULL</code> when missing).</p>
+  <div class="callout">🛠️ Spark tip: small dimension tables get <b>broadcast</b> to every node — a broadcast join. Huge-to-huge joins are where skew/shuffle pain shows up (see Troubleshooting).</div>`,
+  explore:{intro:`Reconstruct the full picture from normalized tables — the move behind almost every support query that starts "which customer/product…".`,
+    examples:[
+      {label:'Order → buyer',query:'SELECT orders.o_id, customers.name, orders.amount\nFROM orders JOIN customers ON orders.c_id = customers.c_id;'},
+      {label:'Item → product',query:'SELECT order_items.o_id, products.name, order_items.qty\nFROM order_items JOIN products ON order_items.p_id = products.p_id;'}]},
+  practice:{type:'sql', prompt:"Show each order's <code>o_id</code> and the <b>customer name</b> who placed it.", expected:`SELECT orders.o_id, customers.name FROM orders JOIN customers ON orders.c_id=customers.c_id`, ordered:false,
+    hints:['JOIN orders to customers ON orders.c_id = customers.c_id.','SELECT orders.o_id, customers.name FROM orders JOIN customers ON orders.c_id = customers.c_id'] },
+  master:{type:'sql', prompt:'For every order item, show <b>o_id, product name, and qty</b>.', expected:`SELECT order_items.o_id, products.name, order_items.qty FROM order_items JOIN products ON order_items.p_id=products.p_id`, ordered:false,
+    hints:['Join order_items to products on p_id.','SELECT order_items.o_id, products.name, order_items.qty FROM order_items JOIN products ON order_items.p_id = products.p_id'] },
+  boss:{type:'sql', prompt:"⚔️ BOSS — List the <b>name</b> and order <b>amount</b> for every customer with a <code>shipped</code> order. (JOIN + WHERE.)", expected:`SELECT customers.name, orders.amount FROM customers JOIN orders ON customers.c_id=orders.c_id WHERE orders.status='shipped'`, ordered:false,
+    hints:["Join customers↔orders, filter status='shipped'.","SELECT customers.name, orders.amount FROM customers JOIN orders ON customers.c_id = orders.c_id WHERE orders.status = 'shipped'"] },
+  elite:{type:'sql', prompt:'Show each product name and the <b>total quantity ever ordered</b> — including products never ordered (show 0). (LEFT JOIN + SUM + COALESCE.)', expected:`SELECT products.name, COALESCE(SUM(order_items.qty),0) FROM products LEFT JOIN order_items ON products.p_id=order_items.p_id GROUP BY products.p_id`, ordered:false,
+    hints:['FROM products LEFT JOIN order_items, SUM(qty) wrapped in COALESCE(...,0).','SELECT products.name, COALESCE(SUM(order_items.qty),0) FROM products LEFT JOIN order_items ON products.p_id = order_items.p_id GROUP BY products.p_id'] }
+},
+{ id:'windows', title:'Window Functions', em:'🪟', track:'sql', deps:['aggregations'], imp:4, diff:'Hard', xp:85,
+  discover:`<p>Window functions compute across rows <b>without collapsing them</b>. <code>OVER()</code> with <code>ROW_NUMBER</code>, <code>RANK</code>, running <code>SUM</code>, and <code>PARTITION BY</code> drive rankings, top-N-per-group, running totals.</p>
+  <div class="callout">🛠️ "Latest record per customer", "rank within category", sessionization — windows are the analytics power-move you'll see all over Databricks notebooks.</div>`,
+  explore:{intro:`Rankings and running calculations alongside the original rows — leaderboards, top-N per group, time-series running totals.`,
+    examples:[
+      {label:'Rank by price',query:'SELECT name, price, RANK() OVER (ORDER BY price DESC) AS rnk FROM products;'},
+      {label:'Running revenue',query:'SELECT o_id, amount, SUM(amount) OVER (ORDER BY o_id) AS running FROM orders;'},
+      {label:'Rank within category',query:'SELECT name, category, price,\n  ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn\nFROM products;'}]},
+  practice:{type:'sql', prompt:'Rank all products by price, highest first. Show name, price, and rank, ordered by price descending.', expected:`SELECT name, price, RANK() OVER (ORDER BY price DESC) AS rnk FROM products ORDER BY price DESC`, ordered:true,
+    hints:['RANK() OVER (ORDER BY price DESC), and ORDER BY price DESC for output.','SELECT name, price, RANK() OVER (ORDER BY price DESC) AS rnk FROM products ORDER BY price DESC'] },
+  master:{type:'sql', prompt:'Within each category, number products from priciest (1) down. Show category, name, that number.', expected:`SELECT category, name, ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn FROM products`, ordered:false,
+    hints:['ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC).','SELECT category, name, ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn FROM products'] },
+  elite:{type:'sql', prompt:'Return only the <b>most expensive product per category</b> — name, category, price. (Window in a subquery, keep rank 1.)', expected:`SELECT name, category, price FROM (SELECT name, category, price, ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn FROM products) WHERE rn=1`, ordered:false,
+    hints:['Compute ROW_NUMBER per category inside a subquery, filter WHERE rn = 1.','SELECT name, category, price FROM (SELECT name, category, price, ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn FROM products) WHERE rn = 1'] }
+},
+{ id:'ctes', title:'CTEs (WITH)', em:'🧩', track:'sql', deps:['aggregations'], imp:4, diff:'Hard', xp:70,
+  discover:`<p>A <b>CTE</b> names a query with <code>WITH x AS (…)</code> so you can reference it like a table. It turns nested logic into <b>readable, testable steps</b> — vital when investigative queries get long.</p>`,
+  explore:{intro:`Break complex queries into named stages you can test one at a time — far easier to debug and hand off.`,
+    examples:[
+      {label:'Filter then group',query:'WITH big AS (SELECT * FROM products WHERE price > 200)\nSELECT category, COUNT(*) AS n FROM big GROUP BY category;'},
+      {label:'CTE + join',query:'WITH oc AS (SELECT c_id, COUNT(*) AS n FROM orders GROUP BY c_id)\nSELECT customers.name, oc.n FROM customers JOIN oc ON customers.c_id = oc.c_id;'}]},
+  practice:{type:'sql', prompt:'Using a CTE named <code>big</code> holding products priced over 200, count how many there are <b>per category</b>.', expected:`WITH big AS (SELECT * FROM products WHERE price>200) SELECT category, COUNT(*) FROM big GROUP BY category`, ordered:false,
+    hints:['WITH big AS (SELECT * FROM products WHERE price > 200) then GROUP BY.','WITH big AS (SELECT * FROM products WHERE price > 200) SELECT category, COUNT(*) FROM big GROUP BY category'] },
+  master:{type:'sql', prompt:"Use a CTE of each customer's order count, then list every customer's <b>name and count (0 if none)</b>.", expected:`WITH oc AS (SELECT c_id, COUNT(*) AS n FROM orders GROUP BY c_id) SELECT customers.name, COALESCE(oc.n,0) FROM customers LEFT JOIN oc ON customers.c_id=oc.c_id`, ordered:false,
+    hints:['CTE counts orders per c_id; LEFT JOIN customers to it; COALESCE(n,0).','WITH oc AS (SELECT c_id, COUNT(*) AS n FROM orders GROUP BY c_id) SELECT customers.name, COALESCE(oc.n,0) FROM customers LEFT JOIN oc ON customers.c_id = oc.c_id'] }
+},
+{ id:'dates', title:'Dates & Timestamps', em:'📅', track:'sql', deps:['filtering'], imp:4, diff:'Medium', xp:45,
+  discover:`<p>Spark has rich time functions — <code>date_trunc('month', ts)</code>, <code>to_date()</code>, <code>date_format()</code>, <code>current_date()</code>. Timestamps stored as <code>'YYYY-MM-DD HH:MM:SS'</code> also sort and range-compare as text.</p>
+  <div class="viz"><pre class="codeblock">-- Spark SQL (reference)
+SELECT date_trunc('month', order_ts) AS month, count(*)
+FROM main.default.orders
+GROUP BY 1;</pre></div>
+  <div class="callout">🛠️ Almost every incident is time-boxed. The sandbox below uses the portable <code>substr()</code>/<code>BETWEEN</code> equivalents so you can run them live.</div>`,
+  explore:{intro:`Slice and bucket by time. <code>substr(order_ts,1,7)</code> grabs the <code>YYYY-MM</code> month (works in Spark and the sandbox).`,
+    examples:[
+      {label:'April orders',query:"SELECT * FROM orders WHERE order_ts BETWEEN '2024-04-01' AND '2024-04-30 23:59:59';"},
+      {label:'Orders per month',query:"SELECT substr(order_ts,1,7) AS month, COUNT(*) AS n FROM orders GROUP BY month;"},
+      {label:'Most recent first',query:'SELECT * FROM orders ORDER BY order_ts DESC;'}]},
+  practice:{type:'sql', prompt:"Count orders <b>per month</b> using <code>substr(order_ts,1,7)</code>. Show the month and the count.", expected:`SELECT substr(order_ts,1,7) AS month, COUNT(*) FROM orders GROUP BY month`, ordered:false,
+    hints:['Group by the substr(order_ts,1,7) expression.','SELECT substr(order_ts,1,7) AS month, COUNT(*) FROM orders GROUP BY month'] },
+  master:{type:'quiz', prompt:'Which Spark SQL function truncates a timestamp to the <b>start of its month</b>?', options:["date_trunc('month', ts)", 'month_floor(ts)', 'trunc_to_month(ts)', 'startofmonth(ts)'], answer:0, hints:["It's date_trunc with a unit string."] }
+},
+{ id:'casequal', title:'CASE & Data Quality', em:'🔀', track:'sql', deps:['filtering'], imp:5, diff:'Medium', xp:55,
+  discover:`<p><code>CASE</code> is SQL's if/else — map codes to labels, bucket numbers. For data quality: <code>NULL</code> means missing (use <code>IS NULL</code>, never <code>= NULL</code>), and <code>COALESCE(a,b)</code> supplies a fallback.</p>
+  <div class="callout">🛠️ A huge share of support tickets are really NULL/labeling bugs. These two tools resolve most of them.</div>`,
+  explore:{intro:`Turn raw stored values into readable output, and find/patch missing data cleanly.`,
+    examples:[
+      {label:'Price tiers',query:"SELECT name, price,\n  CASE WHEN price>=500 THEN 'premium'\n       WHEN price>=100 THEN 'mid'\n       ELSE 'budget' END AS tier\nFROM products;"},
+      {label:'Missing emails',query:'SELECT name FROM customers WHERE email IS NULL;'},
+      {label:'COALESCE fallback',query:"SELECT name, COALESCE(email,'no email') AS email FROM customers;"}]},
+  practice:{type:'sql', prompt:"Show each product's <code>name</code> and a label: <b>'expensive'</b> when price &gt; 200, else <b>'cheap'</b>.", expected:`SELECT name, CASE WHEN price>200 THEN 'expensive' ELSE 'cheap' END FROM products`, ordered:false,
+    hints:['CASE WHEN price > 200 THEN ... ELSE ... END.',"SELECT name, CASE WHEN price > 200 THEN 'expensive' ELSE 'cheap' END FROM products"] },
+  master:{type:'sql', prompt:"Show every customer's name and email, replacing missing emails with <code>'unknown'</code>.", expected:`SELECT name, COALESCE(email,'unknown') FROM customers`, ordered:false,
+    hints:["COALESCE(email,'unknown').","SELECT name, COALESCE(email,'unknown') FROM customers"] },
+  elite:{type:'sql', prompt:"Flag accounts to review: names of customers whose email is <b>missing OR not a gmail address</b>.", expected:`SELECT name FROM customers WHERE email IS NULL OR email NOT LIKE '%gmail%'`, ordered:false,
+    hints:['Combine IS NULL with NOT LIKE using OR.',"SELECT name FROM customers WHERE email IS NULL OR email NOT LIKE '%gmail%'"] }
+},
+/* ----------------------- DELTA LAKE TRACK ----------------------- */
+{ id:'delta', title:'Delta Lake 101', em:'🔺', track:'delta', deps:['catalogs'], imp:5, diff:'Easy', xp:40,
+  discover:`<p><b>Delta Lake</b> is an open storage layer over Parquet files that adds <b>ACID transactions</b>, <b>schema enforcement</b>, and <b>time travel</b>. Every change is recorded in a transaction log folder, <code>_delta_log</code>.</p>
+  <div class="viz"><div class="flow-cols">
+   <span class="pill" style="background:rgba(70,179,255,.2)">Parquet data files</span><span class="arrow">+</span>
+   <span class="pill" style="background:rgba(255,93,122,.25)">_delta_log (JSON commits)</span><span class="arrow">=</span>
+   <span class="pill" style="background:rgba(63,240,168,.2)">reliable Delta table</span></div></div>
+  <div class="callout">🛠️ When a table looks "wrong", <code>DESCRIBE HISTORY</code> shows who changed it and when — your first audit step.</div>`,
+  explore:{readonly:true, intro:`These are real Databricks commands (they run on a Spark cluster, not the browser sandbox).`,
+    examples:[
+      {label:'Create a Delta table',code:`CREATE TABLE main.sales.orders (
+  o_id INT, amount DOUBLE, status STRING
+) USING DELTA;`},
+      {label:'Inspect change history',code:`DESCRIBE HISTORY main.sales.orders;`},
+      {label:'See table details',code:`DESCRIBE DETAIL main.sales.orders;  -- location, #files, size`}]},
+  practice:{type:'quiz', prompt:'What does Delta Lake add on top of plain Parquet files?', options:['Only better compression','ACID transactions, schema enforcement, and time travel','A brand-new query language','Real-time streaming only'], answer:1, hints:['Reliability features over open files.'] },
+  master:{type:'quiz', prompt:'Where does Delta record every change made to a table?', options:['The _delta_log transaction log','A separate MySQL database','Only in cluster memory','A nightly CSV export'], answer:0, hints:['A log folder beside the data files.'] }
+},
+{ id:'merge', title:'MERGE / Upserts', em:'🤝', track:'delta', deps:['delta'], imp:4, diff:'Medium', xp:60,
+  discover:`<p><code>MERGE INTO</code> performs an <b>upsert</b> in one atomic statement: match a source against a target, then <code>UPDATE</code> matches, <code>INSERT</code> new rows, optionally <code>DELETE</code>. The backbone of CDC and slowly-changing-dimension pipelines.</p>`,
+  explore:{readonly:true, intro:`The canonical upsert pattern you'll see in countless Databricks ETL jobs.`,
+    examples:[
+      {label:'Upsert from a staging table',code:`MERGE INTO main.sales.customers AS t
+USING staging.customers AS s
+ON t.c_id = s.c_id
+WHEN MATCHED THEN UPDATE SET *
+WHEN NOT MATCHED THEN INSERT *;`},
+      {label:'Conditional delete',code:`MERGE INTO target t USING source s ON t.id = s.id
+WHEN MATCHED AND s.is_deleted = true THEN DELETE
+WHEN MATCHED THEN UPDATE SET *
+WHEN NOT MATCHED THEN INSERT *;`}]},
+  practice:{type:'quiz', prompt:'What does <code>MERGE INTO</code> let you do in a single statement?', options:['Only insert rows','Conditionally insert, update, and delete (upsert)','Only rename a table','Only drop duplicates'], answer:1, hints:['It is the "upsert" command.'] },
+  master:{type:'quiz', prompt:'In a MERGE, <code>WHEN NOT MATCHED</code> typically does what?', options:['UPDATE the existing target rows','INSERT the new rows from the source','VACUUM old files','DROP the table'], answer:1, hints:['Not matched = not in target yet.'] }
+},
+{ id:'timetravel', title:'Time Travel', em:'⏳', track:'delta', deps:['delta'], imp:4, diff:'Medium', xp:55,
+  discover:`<p>Because Delta keeps old files plus the transaction log, you can query a table <b>as of an earlier version or timestamp</b> — for audits, debugging a bad load, or rolling back with <code>RESTORE</code>.</p>`,
+  explore:{readonly:true, intro:`Query the past, then restore if needed. Lifesavers during incidents.`,
+    examples:[
+      {label:'Query an old version',code:`SELECT * FROM main.sales.orders VERSION AS OF 5;`},
+      {label:'Query as of a time',code:`SELECT * FROM main.sales.orders TIMESTAMP AS OF '2024-04-01';`},
+      {label:'Roll back a bad load',code:`RESTORE TABLE main.sales.orders TO VERSION AS OF 5;`}]},
+  practice:{type:'quiz', prompt:'How do you read a Delta table as it existed at <b>version 5</b>?', options:['SELECT ... VERSION AS OF 5','SELECT ... ROLLBACK 5','SELECT ... HISTORY 5','You cannot query old versions'], answer:0, hints:['VERSION AS OF n.'] },
+  master:{type:'quiz', prompt:'Time travel works because Delta retains…', options:['old data files and the transaction log (until vacuumed)','a full nightly backup','nothing — it recomputes from source','screenshots of the data'], answer:0, hints:['It is the same log that powers ACID.'] }
+},
+{ id:'optimize', title:'OPTIMIZE & Z-Order', em:'⚙️', track:'delta', deps:['delta'], imp:5, diff:'Medium', xp:60,
+  discover:`<p><code>OPTIMIZE</code> compacts many small files into fewer right-sized files (fixing the "small-file problem" that slows reads). <code>ZORDER BY (cols)</code> co-locates related data so the engine <b>skips</b> files it doesn't need (data skipping).</p>
+  <div class="callout">🛠️ "Queries got slow over time" on a frequently-written table? Small files are a prime suspect — OPTIMIZE is the fix.</div>`,
+  explore:{readonly:true, intro:`Compaction and data layout — the two biggest read-performance levers on Delta.`,
+    examples:[
+      {label:'Compact small files',code:`OPTIMIZE main.sales.orders;`},
+      {label:'Z-order for skipping',code:`OPTIMIZE main.sales.orders ZORDER BY (c_id);`}]},
+  practice:{type:'quiz', prompt:'What problem does <code>OPTIMIZE</code> primarily address?', options:['Too many small files slowing reads','Incorrect data types','Forgotten passwords','Network outages'], answer:0, hints:['Think file compaction.'] },
+  master:{type:'quiz', prompt:'<code>ZORDER BY (col)</code> speeds queries by…', options:['co-locating related data so the engine skips irrelevant files','encrypting that column','deleting the column','alphabetizing the table name'], answer:0, hints:['It enables data skipping.'] }
+},
+{ id:'vacuum', title:'VACUUM & Retention', em:'🧹', track:'delta', deps:['optimize'], imp:4, diff:'Medium', xp:50,
+  discover:`<p><code>VACUUM</code> permanently deletes data files no longer referenced by the table, older than a <b>retention window</b> (default 7 days). It frees storage — but <b>removes time-travel</b> to those older versions.</p>
+  <div class="callout">⚠️ Support gotcha: a short retention + VACUUM can make older versions un-restorable. Know the retention before you run it.</div>`,
+  explore:{readonly:true, intro:`Cleanup with care — there's no undo for vacuumed files.`,
+    examples:[
+      {label:'Default vacuum',code:`VACUUM main.sales.orders;   -- removes files > 7 days unreferenced`},
+      {label:'Custom retention',code:`VACUUM main.sales.orders RETAIN 168 HOURS;  -- 7 days`}]},
+  practice:{type:'quiz', prompt:'What does <code>VACUUM</code> do?', options:['Permanently deletes old, unreferenced data files past the retention window','Creates a backup','Adds an index','Restarts the cluster'], answer:0, hints:['It is irreversible cleanup.'] },
+  master:{type:'quiz', prompt:'A risk of VACUUM with a very short retention is…', options:['losing the ability to time-travel/restore older versions','corrupting the schema','dropping the catalog','nothing at all'], answer:0, hints:['It deletes the files time travel relies on.'] }
+},
+{ id:'partitioning', title:'Partitioning & Layout', em:'🧱', track:'delta', deps:['optimize'], imp:4, diff:'Hard', xp:65,
+  discover:`<p><b>Partitioning</b> physically splits a table by a column's values so queries can <b>prune</b> whole partitions. Choose <b>low-cardinality</b> columns you filter on often (e.g. date). Over-partitioning creates tiny files and hurts performance. Newer tables often use <b>Liquid Clustering</b> instead.</p>`,
+  explore:{readonly:true, intro:`Layout choices made at table-creation time that shape every later query's speed.`,
+    examples:[
+      {label:'Partition by date',code:`CREATE TABLE main.sales.events (
+  e_id BIGINT, c_id INT, event_date DATE
+) USING DELTA
+PARTITIONED BY (event_date);`},
+      {label:'Liquid clustering (modern)',code:`CREATE TABLE main.sales.events (...)
+USING DELTA
+CLUSTER BY (c_id);`}]},
+  practice:{type:'quiz', prompt:'Which makes a <b>good partition column</b>?', options:['A high-cardinality unique id','A low-cardinality column you filter on often, like date','A random float','A free-text comment field'], answer:1, hints:['Few distinct values + frequently filtered.'] },
+  master:{type:'quiz', prompt:'Over-partitioning typically causes…', options:['too many tiny files, hurting performance','automatic encryption','faster writes always','better access control'], answer:0, hints:['Same small-file problem OPTIMIZE fixes.'] }
+},
+/* ----------------------- PYSPARK TRACK ----------------------- */
+{ id:'pyspark', title:'PySpark DataFrames', em:'🐍', track:'pyspark', deps:['sparksql'], imp:4, diff:'Medium', xp:55,
+  discover:`<p>A <b>DataFrame</b> is a distributed table you manipulate in Python. <b>Transformations</b> (<code>select</code>, <code>filter</code>, <code>groupBy</code>, <code>withColumn</code>) are <b>lazy</b> — they build a plan. <b>Actions</b> (<code>show</code>, <code>count</code>, <code>collect</code>, <code>write</code>) trigger execution.</p>
+  <div class="callout">🛠️ Lazy evaluation is why a notebook "does nothing" until a cell with <code>.show()</code> runs — and why errors often surface only at the action.</div>`,
+  explore:{readonly:true, intro:`Read PySpark like a support engineer — recognize transformations vs the action that actually runs the job.`,
+    examples:[
+      {label:'Load + filter + aggregate',code:`df = spark.table("main.default.orders")
+shipped = df.filter(df.status == "shipped")   # lazy
+by_cust = shipped.groupBy("c_id").count()     # lazy
+by_cust.show()                                # ACTION -> runs`},
+      {label:'Equivalent SQL',code:`SELECT c_id, count(*)
+FROM main.default.orders
+WHERE status = 'shipped'
+GROUP BY c_id;`}]},
+  practice:{type:'quiz', prompt:'Transformations in Spark are…', options:['lazy — nothing runs until an action is called','always executed immediately','run only on the driver','not allowed on DataFrames'], answer:0, hints:['They build a plan first.'] },
+  master:{type:'quiz', prompt:'Which of these is an <b>action</b> (triggers execution)?', options:['filter()','select()','count()','withColumn()'], answer:2, hints:['Which one returns a final result, not another DataFrame?'] },
+  elite:{type:'quiz', prompt:'Why does Spark use lazy evaluation?', options:['So the Catalyst optimizer can build one efficient plan across all transformations','To reduce typing','To encrypt the data','There is no real reason'], answer:0, hints:['Optimization across the whole chain.'] }
+},
+{ id:'pysparkops', title:'DataFrame Ops', em:'🔧', track:'pyspark', deps:['pyspark'], imp:4, diff:'Medium', xp:55,
+  discover:`<p>The DataFrame API maps almost 1:1 to SQL: <code>WHERE→.filter/.where</code>, <code>SELECT→.select</code>, <code>GROUP BY→.groupBy().agg()</code>, <code>JOIN→.join()</code>, <code>ORDER BY→.orderBy()</code>, new column→<code>.withColumn()</code>.</p>`,
+  explore:{readonly:true, intro:`Knowing the mapping lets you translate a failing PySpark cell into a SQL query you can test in Databricks SQL.`,
+    examples:[
+      {label:'select + filter + order',code:`(df.select("name", "price")
+   .filter(df.price > 200)
+   .orderBy(df.price.desc())
+   .show())`},
+      {label:'groupBy + agg',code:`from pyspark.sql import functions as F
+df.groupBy("category").agg(F.avg("price").alias("avg_price")).show()`},
+      {label:'join',code:`orders.join(customers, orders.c_id == customers.c_id, "inner").show()`}]},
+  practice:{type:'quiz', prompt:'PySpark equivalent of SQL <code>WHERE</code> is…', options:['.filter() / .where()', '.groupBy()', '.select()', '.orderBy()'], answer:0, hints:['Both names work.'] },
+  master:{type:'quiz', prompt:'<code>df.groupBy("category").agg(...)</code> is equivalent to which SQL clause?', options:['GROUP BY category','ORDER BY category','WHERE category','JOIN ON category'], answer:0, hints:['Grouping for aggregation.'] }
+},
+/* ----------------------- PLATFORM & OPS TRACK ----------------------- */
+{ id:'unity', title:'Unity Catalog', em:'🔐', track:'platform', deps:['catalogs'], imp:5, diff:'Medium', xp:55,
+  discover:`<p><b>Unity Catalog</b> is centralized governance across workspaces: the <code>catalog.schema.table</code> namespace, <b>GRANT/REVOKE</b> privileges, automatic <b>data lineage</b>, and audit logs.</p>
+  <div class="callout">🛠️ "User can't see/query a table" is usually a missing GRANT or wrong catalog — Unity Catalog is where you check and fix access.</div>`,
+  explore:{readonly:true, intro:`The governance commands behind most access tickets.`,
+    examples:[
+      {label:'Grant read access',code:`GRANT SELECT ON TABLE main.sales.orders TO analysts;`},
+      {label:'See who has access',code:`SHOW GRANTS ON TABLE main.sales.orders;`},
+      {label:'Revoke',code:`REVOKE SELECT ON TABLE main.sales.orders FROM analysts;`}]},
+  practice:{type:'quiz', prompt:'Unity Catalog organizes data using which namespace?', options:['catalog.schema.table','database.table','server.database','folder/file'], answer:0, hints:['Three levels.'] },
+  master:{type:'quiz', prompt:'Besides access control, what does Unity Catalog provide that helps support &amp; audit?', options:['Automatic data lineage and audit logs','Only billing reports','Cluster autoscaling','A notebook editor'], answer:0, hints:['Who touched what data, and where it came from.'] }
+},
+{ id:'clusters', title:'Clusters & Compute', em:'🖥️', track:'platform', deps:['lakehouse'], imp:5, diff:'Easy', xp:45,
+  discover:`<p>Compute comes in flavors: <b>all-purpose clusters</b> (interactive, shared, for notebooks/dev), <b>job clusters</b> (created per scheduled run, cheaper, ephemeral), and <b>SQL warehouses</b> (for BI/Databricks SQL). <b>Autoscaling</b> adds/removes workers; <b>Photon</b> is a vectorized engine that speeds SQL/DataFrame work.</p>
+  <div class="callout">🛠️ Cost and reliability tickets often come down to cluster choice/size — a job left on a giant 24/7 all-purpose cluster, or a job under-provisioned and failing.</div>`,
+  explore:{readonly:true, intro:`Concept reference — compute is configured in the UI/JSON, not via SQL.`,
+    examples:[
+      {label:'When to use each',code:`all-purpose  -> interactive notebooks, dev, shared
+job cluster  -> scheduled production jobs (ephemeral, cheaper)
+SQL warehouse-> dashboards & Databricks SQL queries`},
+      {label:'Speed lever',code:`Photon = vectorized C++ engine; big speedups for SQL/ETL.
+Autoscaling: min/max workers added on demand.`}]},
+  practice:{type:'quiz', prompt:'Best compute for a <b>scheduled production job</b>?', options:['A job cluster (ephemeral, created per run)','A giant all-purpose cluster left running 24/7','No compute at all','Your local laptop'], answer:0, hints:['Cheap and isolated per run.'] },
+  master:{type:'quiz', prompt:'<b>Photon</b> is…', options:['a vectorized query engine that accelerates SQL/DataFrame workloads','a notebook color theme','a storage file format','a job scheduler'], answer:0, hints:['Performance engine.'] }
+},
+{ id:'jobs', title:'Jobs & Workflows', em:'⚙️', track:'platform', deps:['clusters'], imp:5, diff:'Medium', xp:55,
+  discover:`<p><b>Workflows (Jobs)</b> orchestrate multiple <b>tasks</b> (notebooks, SQL, Python, dbt) with dependencies, <b>schedules</b> (cron), <b>retries</b>, parameters, and alerts. The run history shows each task's status and logs.</p>
+  <div class="callout">🛠️ When a pipeline "didn't run" or "failed overnight", the Job run history → failed task → logs is your standard triage path.</div>`,
+  explore:{readonly:true, intro:`How production pipelines are wired together and monitored.`,
+    examples:[
+      {label:'Task graph',code:`ingest_raw  ->  transform_silver  ->  publish_gold
+   (retry 2x)      (depends on ingest)    (alerts on fail)`},
+      {label:'Where to look on failure',code:`Job run history -> open the failed run
+ -> click the red task -> view logs / error / Spark UI`}]},
+  practice:{type:'quiz', prompt:'A Databricks Job/Workflow can…', options:['orchestrate multiple dependent tasks on a schedule, with retries and alerts','only run one notebook manually','only run SQL queries','only send emails'], answer:0, hints:['Orchestration with dependencies.'] },
+  master:{type:'quiz', prompt:'A scheduled job failed overnight. <b>First</b> place to look?', options:['The run history and the failed task\'s logs','Reboot your laptop','Drop and recreate the catalog','Run VACUUM on everything'], answer:0, hints:['Follow the run → task → logs.'] }
+},
+{ id:'troubleshooting', title:'Troubleshooting', em:'🩺', track:'platform', deps:['jobs','optimize'], imp:5, diff:'Boss', xp:100,
+  discover:`<p>The capstone: diagnosing live Databricks issues. Read the <b>Spark UI</b> (stages/tasks), spot <b>data skew</b> (one task far slower), <b>spill</b> (memory→disk), <b>OOM</b>, and <b>small files</b>. Combine SQL data audits with platform knowledge to answer "is it the data, the query, or the cluster?"</p>
+  <div class="callout">🛠️ Golden rule: don't <code>.collect()</code> a huge dataset to the driver — aggregate, sample, or write to a table. Most driver-OOM incidents trace back to this.</div>`,
+  explore:{intro:`Real audits combine joins, NULL checks and aggregates. These portable diagnostics run live in the sandbox.`,
+    examples:[
+      {label:'Detect skew (rows per key)',query:'SELECT c_id, COUNT(*) AS orders FROM orders GROUP BY c_id ORDER BY orders DESC;'},
+      {label:'Revenue reconciliation',query:'SELECT status, COUNT(*) AS n, SUM(amount) AS revenue FROM orders GROUP BY status;'},
+      {label:'Orphan line-items',query:'SELECT * FROM order_items WHERE p_id NOT IN (SELECT p_id FROM products);'}]},
+  practice:{type:'sql', prompt:'🩺 Check for key skew: show each <code>c_id</code> and its order count, <b>busiest first</b>.', expected:`SELECT c_id, COUNT(*) FROM orders GROUP BY c_id ORDER BY COUNT(*) DESC`, ordered:true,
+    hints:['GROUP BY c_id, COUNT(*), ORDER BY the count DESC.','SELECT c_id, COUNT(*) FROM orders GROUP BY c_id ORDER BY COUNT(*) DESC'] },
+  master:{type:'quiz', prompt:'In the Spark UI, one task taking far longer than all the others usually indicates…', options:['data skew (uneven key distribution)','a perfectly balanced job','too much memory','strong encryption'], answer:0, hints:['Uneven partition sizes.'] },
+  boss:{type:'quiz', prompt:'👑 GRAND BOSS — A job fails with an OutOfMemory error on the <b>driver</b> right after <code>.collect()</code>. Best fix?', options:["Don't pull the whole dataset to the driver — aggregate/limit/sample or write to a table instead",'Add more catalogs','Run VACUUM with zero retention','Rename the table'], answer:0, hints:['collect() materializes everything on the driver.'] },
+  elite:{type:'sql', prompt:'Identify the <b>single top-spending customer</b> — return name and total spend. (JOIN + GROUP BY + ORDER BY + LIMIT.)', expected:`SELECT customers.name, SUM(orders.amount) AS spend FROM customers JOIN orders ON customers.c_id=orders.c_id GROUP BY customers.c_id ORDER BY spend DESC LIMIT 1`, ordered:true,
+    hints:['Sum each customer\'s amounts, ORDER BY spend DESC, LIMIT 1.','SELECT customers.name, SUM(orders.amount) AS spend FROM customers JOIN orders ON customers.c_id = orders.c_id GROUP BY customers.c_id ORDER BY spend DESC LIMIT 1'] }
+}
+] }
+};
+
+/* ---- difficulty-scaled extra tiers for simple SQL nodes (so Low/Med/High differ) ---- */
+(function(){ var M={
+  tables:{type:'sql',prompt:'Show only the <code>name</code> and <code>category</code> of products in the <code>Electronics</code> category.',expected:"SELECT name, category FROM products WHERE category='Electronics'",ordered:false,hints:['Pick two columns, then filter.',"SELECT name, category FROM products WHERE category = 'Electronics'"]},
+  rows:{type:'sql',prompt:'Show the <code>name</code>, <code>country</code> and <code>email</code> of every customer.',expected:'SELECT name, country, email FROM customers',ordered:false,hints:['List three columns, comma-separated.','SELECT name, country, email FROM customers']},
+  select:{type:'sql',prompt:'Show each product name and its price <b>plus 8% tax</b> as a second column.',expected:'SELECT name, price*1.08 FROM products',ordered:false,hints:['Multiply price by 1.08 in the SELECT list.','SELECT name, price * 1.08 FROM products']},
+  orderby:{type:'sql',prompt:'Show the <b>3 cheapest</b> products (name and price), cheapest first.',expected:'SELECT name, price FROM products ORDER BY price ASC LIMIT 3',ordered:true,hints:['ORDER BY price ASC, then LIMIT 3.','SELECT name, price FROM products ORDER BY price ASC LIMIT 3']},
+  distinct:{type:'sql',prompt:'List each unique country customers come from, <b>alphabetically</b>.',expected:'SELECT DISTINCT country FROM customers ORDER BY country',ordered:true,hints:['Add ORDER BY country after DISTINCT.','SELECT DISTINCT country FROM customers ORDER BY country']},
+  leftjoin:{type:'sql',prompt:'List the <b>names of customers who have never placed an order</b>. (LEFT JOIN + IS NULL.)',expected:'SELECT customers.name FROM customers LEFT JOIN orders ON customers.id=orders.customer_id WHERE orders.id IS NULL',ordered:false,hints:['LEFT JOIN orders, keep rows where orders.id IS NULL.','SELECT customers.name FROM customers LEFT JOIN orders ON customers.id = orders.customer_id WHERE orders.id IS NULL']}
+};
+  GAMES.sql.NODES.forEach(function(n){ if(M[n.id] && !n.master) n.master=M[n.id]; });
+})();
+
+/* ===================== ACTIVE-GAME STATE ===================== */
+let G=null, NODES=[], ACHIEVEMENTS=[], byId={}, SAVE_KEY='';
+function defaultState(){ return {xp:0, solved:{}, eliteSolved:{}, achievements:[], combo:0, bestCombo:0, cleanSolves:0, queriesRun:0, difficulty:'med'}; }
+function loadState(){ try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)); return s?Object.assign(defaultState(),s):defaultState();}catch(e){return defaultState();} }
+let state=defaultState();
+function save(){ try{localStorage.setItem(SAVE_KEY, JSON.stringify(state));}catch(e){} }
+const DIFF_MULT={low:1, med:1.2, high:1.5};
+let starColor='#9fb4ff';
+
+/* ===================== SQL ENGINE ===================== */
+let SQLModule=null, db=null, engineReady=false;
+function bootEngine(){
+  if(typeof initSqlJs==='undefined'){ document.getElementById('loadnote').textContent='⚠️ SQL engine CDN unavailable — connect to the internet and reload.'; return; }
+  initSqlJs({locateFile:f=>'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/'+f})
+    .then(SQL=>{ SQLModule=SQL; document.getElementById('loadnote').textContent='✅ Engine ready — choose a tree above.'; if(G) rebuildDB(); })
+    .catch(e=>{ document.getElementById('loadnote').textContent='⚠️ Could not load SQL engine: '+e.message; });
+}
+function rebuildDB(){ if(!SQLModule||!G){ engineReady=false; return; } db=new SQLModule.Database(); db.run(G.SCHEMA); engineReady=true; }
+function runSQL(sql){
+  if(!engineReady) return {ok:false, error:'The SQL engine is still loading — give it a second.'};
+  try{ const res=db.exec(sql);
+    if(!res.length) return {ok:true, columns:[], values:[]};
+    return {ok:true, columns:res[0].columns, values:res[0].values};
+  }catch(e){ return {ok:false, error:friendlyError(e.message)}; }
+}
+function friendlyError(m){
+  if(/no such table/i.test(m)) return m+'  — available tables: '+(G?G.tables.replace(/ · /g,', '):'')+'.';
+  if(/no such column/i.test(m)) return m+'  — column typo? Text values need single quotes.';
+  if(/syntax error/i.test(m)) return 'Syntax error — check commas, quotes and keyword spelling. ('+m+')';
+  return m;
+}
+function normalize(values, ordered){
+  const norm=values.map(r=>r.map(c=>{ if(c===null||c===undefined) return '∅'; if(typeof c==='number') return (Math.round(c*1e6)/1e6).toString(); return (''+c).trim(); }));
+  if(!ordered) norm.sort((a,b)=> JSON.stringify(a)<JSON.stringify(b)?-1:1);
+  return JSON.stringify(norm);
+}
+function checkAnswer(userSql, expectedSql, ordered){
+  const u=runSQL(userSql); if(!u.ok) return {correct:false, error:u.error};
+  const e=runSQL(expectedSql); if(!e.ok) return {correct:false, error:'Answer-key error: '+e.error};
+  return {correct: normalize(u.values,ordered)===normalize(e.values,ordered), user:u};
+}
+
+/* ===================== NODE STATUS (difficulty-scaled ladder) ===================== */
+function cid(id,k){ return id+':'+k; }
+var LADDER=['practice','master','boss','elite'];
+function ladder(n){ return LADDER.filter(function(k){return n[k];}).map(function(k){return {kind:k,spec:n[k]};}); }
+function modeIdx(L){ if(state.difficulty==='low')return 0; if(state.difficulty==='high')return L-1; return Math.min(1,L-1); }
+function challengeForMode(n){ var l=ladder(n); return l.length?l[modeIdx(l.length)]:null; }
+function tierSolved(n,k){ return !!state.solved[cid(n.id,k)]; }
+function nodeCleared(n){ return ladder(n).some(function(c){return tierSolved(n,c.kind);}); }
+function nodeMastered(n){ return nodeCleared(n); }
+function nodeAllSolved(n){ var l=ladder(n); return l.length>0 && l.every(function(c){return tierSolved(n,c.kind);}); }
+function nodeProgress(n){ var l=ladder(n); if(!l.length) return 0; return Math.round(100*l.filter(function(c){return tierSolved(n,c.kind);}).length/l.length); }
+function nodeUnlocked(n){ return n.deps.every(function(d){return nodeCleared(byId[d]);}); }
+function nodeStatus(n){ if(!nodeUnlocked(n)) return 'locked'; if(nodeAllSolved(n)) return 'mastered'; if(nodeCleared(n)) return 'progress'; return 'available'; }
+function isGrandBoss(n){ return n.diff==='Boss' || n.id==='having'; }
+
+/* ===================== AUTO LAYOUT ===================== */
+let CANVAS_W=1240, CANVAS_H=900;
+function layoutTree(){
+  const depth={};
+  function d(n){ if(depth[n.id]!=null) return depth[n.id]; if(!n.deps.length){depth[n.id]=0;return 0;} const v=1+Math.max.apply(null,n.deps.map(id=>d(byId[id]))); depth[n.id]=v; return v; }
+  NODES.forEach(d);
+  const maxD=Math.max.apply(null,Object.values(depth));
+  const tiers=[]; for(let i=0;i<=maxD;i++) tiers[i]=[];
+  NODES.forEach(n=>tiers[depth[n.id]].push(n));
+  const pos={}; tiers.forEach(t=>t.forEach((n,i)=>pos[n.id]=i));
+  for(let pass=0;pass<5;pass++){
+    for(let lvl=1;lvl<tiers.length;lvl++){
+      tiers[lvl].sort((a,b)=>{
+        const ka=a.deps.length?a.deps.reduce((s,id)=>s+pos[id],0)/a.deps.length:pos[a.id];
+        const kb=b.deps.length?b.deps.reduce((s,id)=>s+pos[id],0)/b.deps.length:pos[b.id];
+        return ka-kb;
+      });
+      tiers[lvl].forEach((n,i)=>pos[n.id]=i);
+    }
+  }
+  const maxCount=Math.max.apply(null,tiers.map(t=>t.length));
+  const HGAP=234, VGAP=188, MARG=130, TOP=80;
+  CANVAS_W=Math.max(1240, MARG*2+(maxCount-1)*HGAP);
+  CANVAS_H=TOP+maxD*VGAP+150;
+  tiers.forEach((t,lvl)=>{ const k=t.length, w=(k-1)*HGAP, start=(CANVAS_W-w)/2;
+    t.forEach((n,i)=>{ n.x=start+i*HGAP; n.y=TOP+lvl*VGAP; }); });
+  const w=document.getElementById('world'), svg=document.getElementById('links');
+  w.style.width=CANVAS_W+'px'; w.style.height=CANVAS_H+'px';
+  svg.style.width=CANVAS_W+'px'; svg.style.height=CANVAS_H+'px'; svg.setAttribute('viewBox','0 0 '+CANVAS_W+' '+CANVAS_H);
+}
+
+/* ===================== RENDER TREE ===================== */
+const world=document.getElementById('world'), links=document.getElementById('links');
+function renderTree(){
+  links.querySelectorAll('.link').forEach(e=>e.remove());
+  NODES.forEach(n=>n.deps.forEach(dp=>{ const p=byId[dp]; const active=nodeMastered(p);
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    const midY=(p.y+n.y)/2;
+    path.setAttribute('d','M'+p.x+','+p.y+' C'+p.x+','+midY+' '+n.x+','+midY+' '+n.x+','+n.y);
+    path.setAttribute('class','link '+(active?'active':'locked')); links.appendChild(path); }));
+  world.querySelectorAll('.node').forEach(e=>e.remove());
+  NODES.forEach(n=>{ const st=nodeStatus(n);
+    const el=document.createElement('div'); el.className='node '+st+' '+(n.track||'sql');
+    el.style.left=n.x+'px'; el.style.top=n.y+'px'; el.style.setProperty('--p', nodeProgress(n));
+    el.innerHTML=(st==='mastered'?'<div class="crown">👑</div>':'')+
+      '<div class="ring"><div class="core"><div class="em">'+n.em+'</div>'+(st==='locked'?'<div class="lock">🔒</div>':'')+'</div></div>'+
+      (st!=='locked'?'<div class="xpchip">'+n.xp+'⭐</div>':'')+
+      '<div class="label">'+n.title+'<span class="sub">'+'★'.repeat(n.imp)+'</span></div>';
+    el.onclick=e=>{ e.stopPropagation(); openNode(n); }; world.appendChild(el); });
+  updateHUD(); updateGuide();
+}
+
+/* ===================== HUD ===================== */
+function levelFromXP(xp){ let lvl=1,need=100,acc=0; while(xp>=acc+need){acc+=need;lvl++;need=Math.round(need*1.35);} return {lvl,acc,need,into:xp-acc}; }
+function updateHUD(){
+  const mastered=NODES.filter(nodeMastered).length;
+  document.getElementById('s-mastered').textContent=mastered;
+  document.getElementById('s-pct').textContent=(NODES.length?Math.round(100*mastered/NODES.length):0)+'%';
+  document.getElementById('s-streak').textContent=state.combo+'🔥';
+  const L=levelFromXP(state.xp);
+  document.getElementById('lvlBadge').textContent=L.lvl;
+  document.getElementById('xpfill').style.width=(100*L.into/L.need)+'%';
+  document.getElementById('xpnow').textContent=state.xp+' XP';
+  document.getElementById('xpnext').textContent='Lv '+(L.lvl+1)+' · '+(L.need-L.into)+' to go';
+  document.querySelectorAll('#diffsel button').forEach(b=>b.classList.toggle('on', b.dataset.d===state.difficulty));
+}
+function diffRank(d){ return {Novice:0,Easy:1,Medium:2,Hard:3,Boss:4}[d]||1; }
+function updateGuide(){
+  const avail=NODES.filter(n=>{const s=nodeStatus(n); return s==='available'||s==='progress';});
+  const g=document.getElementById('guideText'), btn=document.getElementById('guideBtn');
+  if(NODES.every(nodeMastered)){ g.innerHTML='🎉 You\'ve mastered the entire tree. Legendary.'; btn.style.display='none'; return; }
+  if(!avail.length){ g.textContent='Keep going — unlock the next path.'; btn.style.display='none'; return; }
+  avail.sort((a,b)=> (nodeStatus(b)==='progress')-(nodeStatus(a)==='progress') || diffRank(a.diff)-diffRank(b.diff) || b.imp-a.imp);
+  const next=avail[0];
+  g.innerHTML='Recommended next: <b>'+next.title+'</b> · '+next.diff+' · +'+next.xp+' XP';
+  btn.style.display=''; btn.onclick=()=>{ focusNode(next); openNode(next); };
+}
+
+/* ===================== MODAL ===================== */
+const overlay=document.getElementById('overlay'), modal=document.getElementById('modal');
+let activeNode=null, activeTab='discover', hintIdx=0, attemptCount={};
+function openNode(n){ if(nodeStatus(n)==='locked'){ toast('🔒','Locked','Master its prerequisites first.'); return; } activeNode=n; activeTab='discover'; renderModal(); overlay.classList.add('on'); }
+function closeModal(){ overlay.classList.remove('on'); activeNode=null; }
+overlay.onclick=e=>{ if(e.target===overlay) closeModal(); };
+window.closeModal=closeModal;
+function renderModal(){
+  const n=activeNode;
+  const ch=challengeForMode(n);
+  const tabs=[{k:'discover',l:'📖 Discover'},{k:'explore',l:(n.explore&&n.explore.readonly?'📑 Reference':'🧪 Explore')}];
+  if(ch) tabs.push({k:'challenge',l:'🎯 Challenge'});
+  if(!tabs.find(t=>t.k===activeTab)) activeTab='discover';
+  const done=k=> k==='challenge' ? (ch && tierSolved(n,ch.kind)) : false;
+  modal.innerHTML=
+    '<div class="m-head"><div class="em">'+n.em+'</div><div><h2>'+n.title+'</h2>'+
+    '<div class="meta"><span class="stars-s">'+'★'.repeat(n.imp)+'☆'.repeat(5-n.imp)+'</span><span>🎚️ '+n.diff+'</span><span>⭐ '+n.xp+' XP</span><span>'+nodeProgress(n)+'% mastered</span></div></div>'+
+    '<div class="x" onclick="closeModal()">✕</div></div>'+
+    '<div class="tabs">'+tabs.map(t=>'<div class="tab '+(t.k===activeTab?'active':'')+' '+(done(t.k)?'done':'')+' '+(t.k==='elite'?'elite':'')+'" onclick="switchTab(\''+t.k+'\')"><span class="dot"></span>'+t.l+'</div>').join('')+'</div>'+
+    '<div class="m-body" id="mbody"></div>';
+  renderTab();
+}
+function switchTab(k){ activeTab=k; renderModal(); }
+window.switchTab=switchTab;
+function renderTab(){
+  const n=activeNode, body=document.getElementById('mbody');
+  if(activeTab==='discover'){ body.innerHTML='<h3>Discover</h3>'+n.discover+'<div class="btnrow"><button class="btn run" onclick="switchTab(\'explore\')">'+(n.explore&&n.explore.readonly?'See the commands →':'Try it in the sandbox →')+'</button></div>'; return; }
+  if(activeTab==='explore'){ renderExplore(body,n); return; }
+  const sel=challengeForMode(n);
+  if(!sel){ body.innerHTML='<p style="color:var(--mut)">No challenge on this node.</p>'; return; }
+  if(sel.spec.type==='quiz'){ renderQuiz(body,sel.spec,sel.kind); return; }
+  renderChallenge(body,sel.spec,sel.kind);
+}
+
+/* ===================== EXPLORE ===================== */
+const rnd=()=>Math.random().toString(36).slice(2);
+function renderExplore(body,n){
+  const ex=n.explore;
+  if(ex.readonly){
+    body.innerHTML='<h3>Reference — '+n.title+'</h3><p>'+ex.intro+'</p>'+
+      '<div class="callout" style="font-size:12.5px">🔴 These run on a Databricks Spark cluster, not the in-browser sandbox. Study the syntax here — you\'ll recognise it in real notebooks and jobs.</div>'+
+      ex.examples.map(e=>'<div class="ex-lab" style="margin-top:14px">'+e.label+'</div><div class="viz"><pre class="codeblock">'+escapeHtml(e.code)+'</pre></div>').join('');
+    return;
+  }
+  const id='sb'+rnd();
+  body.innerHTML='<h3>Explore — '+n.title+'</h3><p>'+ex.intro+'</p>'+
+    '<div class="callout" style="font-size:12.5px">🔵 '+G.engineNote+' Tables: '+G.tables.split(' · ').map(t=>'<code>'+t+'</code>').join(' · ')+'.</div>'+
+    '<div class="examples"><span class="ex-lab">💡 Examples — click one to load &amp; run:</span>'+
+      ex.examples.map((e,i)=>'<button class="ex-chip" data-i="'+i+'">'+e.label+'</button>').join('')+'</div>'+
+    '<textarea class="sqlbox" id="'+id+'">'+escapeHtml(ex.examples[0].query)+'</textarea>'+
+    '<div class="btnrow"><button class="btn run" id="'+id+'_run">▶ Run query</button><button class="btn ghost" id="'+id+'_clear">Clear</button></div>'+
+    '<div class="result" id="'+id+'_res"></div>';
+  const ta=document.getElementById(id), res=document.getElementById(id+'_res');
+  document.getElementById(id+'_run').onclick=()=>runAndShow(ta.value,res);
+  document.getElementById(id+'_clear').onclick=()=>{ ta.value=''; res.innerHTML=''; };
+  body.querySelectorAll('.ex-chip').forEach(c=>c.onclick=()=>{ ta.value=ex.examples[+c.dataset.i].query; runAndShow(ta.value,res); ta.scrollIntoView({block:'nearest'}); });
+  runAndShow(ta.value,res);
+}
+function runAndShow(sql,resEl){
+  const r=runSQL(sql); state.queriesRun++; unlock('firstquery'); if(state.queriesRun>=12) unlock('explorer'); save();
+  if(!r.ok){ resEl.innerHTML='<div class="res-msg err">❌ '+escapeHtml(r.error)+'</div>'; return; }
+  resEl.innerHTML='<div class="res-msg ok">✅ '+r.values.length+' row(s) returned</div>'+tableHtml(r);
+}
+function tableHtml(r){
+  if(!r.columns.length) return '<div class="hintbox">Query ran — no rows to display.</div>';
+  let h='<div class="viz"><table class="data"><tr>'+r.columns.map(c=>'<th>'+escapeHtml(c)+'</th>').join('')+'</tr>';
+  r.values.slice(0,60).forEach(row=>{ h+='<tr>'+row.map(c=>'<td>'+(c===null?'<span style="color:var(--dim)">NULL</span>':escapeHtml(''+c))+'</td>').join('')+'</tr>'; });
+  h+='</table></div>'; if(r.values.length>60) h+='<div class="hintbox">Showing first 60 of '+r.values.length+' rows.</div>'; return h;
+}
+
+/* ===================== CHALLENGE ===================== */
+function renderChallenge(body,spec,kind){
+  const n=activeNode, id='ch'+rnd(); hintIdx=0;
+  const isBoss=kind==='boss', isElite=kind==='elite';
+  const solved=tierSolved(n,kind);
+  const modeName=state.difficulty.toUpperCase();
+  const label=isElite?'ELITE TIER':isBoss?(isGrandBoss(n)?'GRAND BOSS':'BOSS TIER'):kind==='master'?'ADVANCED TIER':'CORE TIER';
+  const lad=ladder(n), solvedN=lad.filter(function(c){return tierSolved(n,c.kind);}).length;
+  const revealAt={low:1,med:2,high:4}[state.difficulty];
+  body.innerHTML=
+    '<div class="prompt-box'+((isElite||isBoss)?' elite':'')+'"><div class="tag">'+(isElite?'💎 ':isBoss?'⚔️ ':'')+label+(solved?' · ✅ CLEARED':'')+' · '+modeName+' MODE</div><p>'+spec.prompt+'</p></div>'+
+    '<div style="font-size:11.5px;color:var(--mut);margin:-4px 0 10px">🎚️ This question scales with the <b>'+modeName+'</b> setting in the top bar — switch <b>Low / Med / High</b> for an easier or harder version. Tiers cleared on this node: '+solvedN+' / '+lad.length+'.</div>'+
+    '<textarea class="sqlbox" id="'+id+'" placeholder="Write your query here…"></textarea>'+
+    '<div class="btnrow"><button class="btn run" id="'+id+'_run">▶ Run &amp; Check</button>'+
+    '<button class="btn hint" id="'+id+'_hint">💡 Hint</button>'+
+    '<button class="btn reveal" id="'+id+'_rev" style="display:'+(state.difficulty==='low'?'':'none')+'">👁 Reveal answer</button></div>'+
+    '<div id="'+id+'_hints"></div><div class="result" id="'+id+'_res"></div>';
+  const ta=document.getElementById(id);
+  document.getElementById(id+'_run').onclick=()=>checkAndShow(spec,kind,ta.value,document.getElementById(id+'_res'),id);
+  document.getElementById(id+'_hint').onclick=()=>{ const hb=document.getElementById(id+'_hints');
+    if(hintIdx<spec.hints.length){ const h=document.createElement('div'); h.className='hintbox'; h.innerHTML='💡 '+spec.hints[hintIdx]; hb.appendChild(h); hintIdx++; }
+    if(hintIdx>=spec.hints.length-1) document.getElementById(id+'_rev').style.display=''; };
+  document.getElementById(id+'_rev').onclick=()=>{ ta.value=spec.expected; toast('👁','Answer revealed','Run it, then try a variation to lock it in.'); };
+  if(state.difficulty==='low'){ const hb=document.getElementById(id+'_hints'); const h=document.createElement('div'); h.className='hintbox'; h.innerHTML='💡 '+spec.hints[0]; hb.appendChild(h); hintIdx=1; }
+  body.dataset.revealAt=revealAt;
+}
+function checkAndShow(spec,kind,sql,resEl,id){
+  const n=activeNode, key=cid(n.id,kind);
+  if(!sql.trim()){ resEl.innerHTML='<div class="res-msg err">✍️ Write a query first.</div>'; return; }
+  const r=checkAnswer(sql,spec.expected,spec.ordered);
+  state.queriesRun++; if(state.queriesRun>=12) unlock('explorer');
+  if(r.error){ resEl.innerHTML='<div class="res-msg err">❌ '+escapeHtml(r.error)+'</div>'; bumpAttempt(id,key,resEl); breakCombo(); save(); return; }
+  if(r.correct){
+    if(tierSolved(n,kind)){ resEl.innerHTML='<div class="res-msg ok">✅ Correct (already cleared).</div>'+tableHtml(r.user); return; }
+    const clean=(attemptCount[key]||0)===0 && hintIdx===0;
+    const isBoss=kind==='boss', isElite=kind==='elite';
+    resEl.innerHTML='<div class="res-msg win">🎉 Correct! '+(isElite?'Elite tier cleared!':isBoss?'Boss defeated!':'Tier cleared!')+'</div>'+tableHtml(r.user);
+    awardSolve(n,kind,clean);
+    renderModal();
+  } else {
+    resEl.innerHTML='<div class="res-msg err">❌ Not quite — your result doesn\'t match what\'s expected.</div>'+tableHtml(r.user);
+    bumpAttempt(id,key,resEl); breakCombo(); save();
+  }
+}
+function bumpAttempt(id,key,resEl){
+  attemptCount[key]=(attemptCount[key]||0)+1;
+  const revealAt=+document.getElementById('mbody').dataset.revealAt||2;
+  if(attemptCount[key]>=revealAt){ const note=document.createElement('div'); note.className='hintbox';
+    note.innerHTML='🧭 Stuck? Tap <b>💡 Hint</b> for a nudge, or <b>👁 Reveal</b> to study the solution.'; resEl.appendChild(note);
+    const rev=document.getElementById(id+'_rev'); if(rev) rev.style.display=''; }
+}
+
+/* ===================== QUIZ ===================== */
+function renderQuiz(body,ch,kind){
+  const n=activeNode, solved=state.solved[cid(n.id,kind)];
+  body.innerHTML='<div class="prompt-box"><div class="tag">🧠 ACTIVE RECALL'+(solved?' · ✅ CLEARED':'')+'</div><p>'+ch.prompt+'</p></div><div id="qopts"></div><div class="result" id="qres"></div>';
+  const wrap=document.getElementById('qopts');
+  ch.options.forEach((opt,i)=>{ const b=document.createElement('button'); b.className='quiz-opt'; b.innerHTML=opt;
+    b.onclick=()=>{ document.querySelectorAll('.quiz-opt').forEach(x=>x.style.pointerEvents='none');
+      if(i===ch.answer){ b.classList.add('right'); document.getElementById('qres').innerHTML='<div class="res-msg win">🎉 Correct!</div>';
+        if(!state.solved[cid(n.id,kind)]) awardSolve(n,kind,true); setTimeout(renderModal,900);
+      } else { b.classList.add('wrong'); wrap.children[ch.answer].classList.add('right');
+        document.getElementById('qres').innerHTML='<div class="res-msg err">❌ Not quite — the highlighted answer is correct. '+(ch.hints?ch.hints[0]:'')+'</div>';
+        breakCombo(); save(); setTimeout(()=>document.querySelectorAll('.quiz-opt').forEach(x=>x.style.pointerEvents=''),1200); } };
+    wrap.appendChild(b); });
+}
+
+/* ===================== REWARDS ===================== */
+function awardSolve(n,kind,clean){
+  state.solved[cid(n.id,kind)]=true;
+  let base=n.xp; if(kind==='master')base=Math.round(n.xp*1.1); if(kind==='boss')base=Math.round(n.xp*1.4); if(kind==='elite')base=Math.round(n.xp*1.6);
+  let xp=Math.round(base*DIFF_MULT[state.difficulty]);
+  let bonus=0; if(clean){ bonus=Math.round(xp*0.25); state.cleanSolves++; if(state.cleanSolves>=5) unlock('speed'); }
+  state.xp+=xp+bonus;
+  state.combo++; if(state.combo>state.bestCombo) state.bestCombo=state.combo; if(state.combo>=5) unlock('combo');
+  unlock('firstblood');
+  if(kind==='boss'){ unlock('boss'); if(isGrandBoss(n)) unlock('grandboss'); }
+  if(kind==='elite') unlock('elite');
+  save(); floatXP(xp+bonus);
+  toast('⭐','+'+(xp+bonus)+' XP'+(clean?' (clean bonus!)':''), 'Combo x'+state.combo+' · '+state.difficulty.toUpperCase()+' mode');
+  if(nodeAllSolved(n)){ setTimeout(()=>toast('👑','Node Mastered!', n.title+' — all tiers cleared!'),400); confetti(); }
+  const m=NODES.filter(nodeCleared);
+  const hasA=id=>ACHIEVEMENTS.some(a=>a.id===id);
+  const cnt=t=>m.filter(x=>x.track===t).length;
+  if(hasA('support') && cnt('support')>=4) unlock('support');
+  if(hasA('delta') && cnt('delta')>=3) unlock('delta');
+  if(hasA('platform') && cnt('platform')>=3) unlock('platform');
+  if(m.length>=Math.ceil(NODES.length/2)) unlock('half');
+  if(NODES.every(nodeCleared)) unlock('allnodes');
+  renderTree();
+}
+function breakCombo(){ if(state.combo>0){ state.combo=0; updateHUD(); } }
+
+/* ===================== FX ===================== */
+function toast(ic,title,sub){ const t=document.createElement('div'); t.className='toast';
+  t.innerHTML='<div class="ic">'+ic+'</div><div><b>'+title+'</b><span>'+(sub||'')+'</span></div>';
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>{ t.style.transition='.4s'; t.style.opacity='0'; t.style.transform='translateX(120%)'; setTimeout(()=>t.remove(),400); },3600); }
+function floatXP(amt){ const f=document.createElement('div'); f.className='xpfloat'; f.textContent='+'+amt+' XP';
+  f.style.left=(window.innerWidth/2-20)+'px'; f.style.top=(window.innerHeight/2)+'px'; document.body.appendChild(f); setTimeout(()=>f.remove(),1200); }
+function confetti(){ for(let i=0;i<30;i++){ const c=document.createElement('div'); const col=['#28e0ff','#7c5cff','#ffce4a','#3ff0a8','#ff5d7a','#ff6b3d'][i%6];
+  c.style.cssText='position:fixed;z-index:75;width:8px;height:12px;background:'+col+';left:50%;top:42%;border-radius:2px;pointer-events:none';
+  document.body.appendChild(c); const ang=Math.random()*Math.PI*2, dist=120+Math.random()*180, dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist;
+  c.animate([{transform:'translate(0,0) rotate(0)',opacity:1},{transform:'translate('+dx+'px,'+dy+'px) rotate('+(Math.random()*720)+'deg)',opacity:0}],{duration:900+Math.random()*500,easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=()=>c.remove(); } }
+function escapeHtml(s){ return (''+s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ===================== ACHIEVEMENTS UI ===================== */
+function unlock(id){ if(state.achievements.includes(id)) return; state.achievements.push(id); save();
+  const a=ACHIEVEMENTS.find(x=>x.id===id); if(a) toast(a.ic,'Achievement: '+a.name,a.desc); renderAchv(); }
+function renderAchv(){ const list=document.getElementById('achvList');
+  list.innerHTML=ACHIEVEMENTS.map(a=>{ const got=state.achievements.includes(a.id);
+    return '<div class="achv-item '+(got?'got':'')+'"><div class="ic">'+(got?a.ic:'🔒')+'</div><div><b>'+a.name+'</b><span>'+a.desc+'</span></div></div>'; }).join('');
+  document.getElementById('achvSub').textContent=state.achievements.length+' / '+ACHIEVEMENTS.length+' unlocked'; }
+document.getElementById('achvBtn').onclick=()=>document.getElementById('achv').classList.toggle('on');
+document.getElementById('achvClose').onclick=()=>document.getElementById('achv').classList.remove('on');
+document.getElementById('resetBtn').onclick=()=>{ if(!G) return; if(confirm('Reset all progress, XP and achievements for '+G.title+'?')){ const d=state.difficulty; state=defaultState(); state.difficulty=d; attemptCount={}; save(); renderTree(); renderAchv(); toast('↺','Progress reset','A fresh start awaits.'); } };
+document.querySelectorAll('#diffsel button').forEach(b=>b.onclick=()=>{ if(!G) return; state.difficulty=b.dataset.d; save(); updateHUD();
+  toast('🎚️',b.dataset.d.toUpperCase()+' mode', b.dataset.d==='high'?'Elite challenges unlocked · 1.5× XP':b.dataset.d==='med'?'Balanced · 1.2× XP':'Gentle · auto-hints on');
+  if(activeNode) renderModal(); });
+
+/* ===================== ZOOM / PAN ===================== */
+let scale=0.8, tx=0, ty=90, dragging=false, sx, sy, startTx, startTy;
+const stage=document.getElementById('stage');
+function applyTransform(){ world.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; }
+function fit(){ const r=stage.getBoundingClientRect(); scale=Math.min(0.9,(r.height-120)/CANVAS_H); scale=Math.max(scale,0.34); tx=(r.width-CANVAS_W*scale)/2; ty=104; applyTransform(); }
+stage.addEventListener('mousedown',e=>{ if(e.target.closest('.node')) return; dragging=true; stage.classList.add('drag'); sx=e.clientX; sy=e.clientY; startTx=tx; startTy=ty; });
+window.addEventListener('mousemove',e=>{ if(!dragging) return; tx=startTx+(e.clientX-sx); ty=startTy+(e.clientY-sy); applyTransform(); });
+window.addEventListener('mouseup',()=>{ dragging=false; stage.classList.remove('drag'); });
+stage.addEventListener('wheel',e=>{ e.preventDefault(); const r=stage.getBoundingClientRect(); const mx=e.clientX-r.left, my=e.clientY-r.top, old=scale;
+  scale=Math.min(1.8,Math.max(0.34, scale*(e.deltaY<0?1.12:0.89))); tx=mx-(mx-tx)*(scale/old); ty=my-(my-ty)*(scale/old); applyTransform(); },{passive:false});
+let lastTouch=null;
+stage.addEventListener('touchstart',e=>{ if(e.target.closest('.node'))return; if(e.touches.length===1) lastTouch={x:e.touches[0].clientX,y:e.touches[0].clientY,tx,ty}; },{passive:true});
+stage.addEventListener('touchmove',e=>{ if(lastTouch&&e.touches.length===1){ tx=lastTouch.tx+(e.touches[0].clientX-lastTouch.x); ty=lastTouch.ty+(e.touches[0].clientY-lastTouch.y); applyTransform(); } },{passive:true});
+stage.addEventListener('touchend',()=>lastTouch=null);
+document.getElementById('zin').onclick=()=>{ scale=Math.min(1.8,scale*1.15); applyTransform(); };
+document.getElementById('zout').onclick=()=>{ scale=Math.max(0.34,scale*0.87); applyTransform(); };
+document.getElementById('zfit').onclick=fit;
+function focusNode(n){ const r=stage.getBoundingClientRect(); scale=0.85; tx=r.width/2-n.x*scale; ty=r.height/2-n.y*scale; applyTransform(); }
+
+/* ===================== GAME SELECT / THEME ===================== */
+function applyTheme(){
+  document.body.className=G.themeClass;
+  document.getElementById('logoMark').textContent=G.mark;
+  document.getElementById('logoName').innerHTML=G.title+'<small>'+G.small+'</small>';
+  document.getElementById('minimap-note').textContent=G.legend;
+  document.getElementById('grad0').setAttribute('stop-color',G.grad[0]);
+  document.getElementById('grad1').setAttribute('stop-color',G.grad[1]);
+  starColor=getComputedStyle(document.body).getPropertyValue('--star').trim()||'#9fb4ff';
+}
+function selectGame(id){
+  if(G) save();
+  G=GAMES[id]; NODES=G.NODES; ACHIEVEMENTS=G.ACHIEVEMENTS;
+  byId=Object.fromEntries(NODES.map(n=>[n.id,n]));
+  SAVE_KEY=G.saveKey; state=loadState(); attemptCount={};
+  applyTheme(); rebuildDB(); closeModal();
+  layoutTree(); renderTree(); renderAchv();
+  document.getElementById('home').classList.remove('shown');
+  fit();
+}
+document.querySelectorAll('.game-card').forEach(c=>c.onclick=()=>selectGame(c.dataset.g));
+document.getElementById('homeBtn').onclick=()=>{ if(G) save(); document.getElementById('home').classList.add('shown'); };
+
+/* ===================== INIT ===================== */
+bootEngine();
+(function(){ const cv=document.getElementById('stars'), ctx=cv.getContext('2d');
+  function size(){ cv.width=innerWidth; cv.height=innerHeight; } size(); addEventListener('resize',()=>{ size(); if(G) fit(); });
+  const st=Array.from({length:90},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.4,a:Math.random()}));
+  (function loop(){ ctx.clearRect(0,0,cv.width,cv.height); st.forEach(s=>{ s.a+=0.01; ctx.globalAlpha=0.3+0.5*Math.abs(Math.sin(s.a)); ctx.fillStyle=starColor; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,7); ctx.fill(); }); requestAnimationFrame(loop); })();
+})();
+window.openNode=openNode;
+</script>
+</body>
+</html>
