@@ -256,6 +256,35 @@ html,body{overflow-x:hidden}
 .explain .gl{margin-top:8px;font-size:12.5px;color:var(--mut)}
 .explain code{background:var(--soft);font-size:12.5px}
 @media (max-width:768px){.explain{font-size:14px}}
+.lprog{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.lprog-bar{flex:1;height:7px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid var(--line)}
+.lprog-bar>div{height:100%;background:linear-gradient(90deg,var(--cy),var(--cy2));transition:width .3s}
+.lprog span{font-size:11.5px;color:var(--mut);font-weight:700;white-space:nowrap}
+.lnav{display:flex;justify-content:space-between;gap:10px;margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+.fillsql{font-family:'Consolas',monospace;font-size:14px;background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:10px;padding:14px;line-height:2.1;margin:10px 0;word-break:break-word}
+.slot{display:inline-block;min-width:44px;text-align:center;border-bottom:2px dashed var(--cy);color:var(--cy);padding:1px 8px;margin:0 2px;cursor:pointer;font-weight:700}
+.slot.on{border-bottom-style:solid;color:var(--green);border-color:var(--green)}
+.bank{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.bank .tok.used{opacity:.3;pointer-events:none}
+.mentor{margin-top:10px;background:rgba(70,179,255,.08);border:1px solid rgba(70,179,255,.35);border-left:3px solid var(--blue);border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.5}
+.mentor ul{margin:6px 0 0 18px;padding:0}
+.mentor li{margin:4px 0}
+#course{position:fixed;inset:0;z-index:27;background:var(--bggrad);overflow:auto;display:none;padding:calc(74px + env(safe-area-inset-top)) 16px max(40px,env(safe-area-inset-bottom))}
+#course.on{display:block}
+.course-inner{max-width:760px;margin:0 auto}
+.course-title{font-size:21px;margin-bottom:6px}
+.course-sec{margin-bottom:22px}
+.course-sec-h{font-size:12.5px;text-transform:uppercase;letter-spacing:1px;color:var(--mut);font-weight:800;margin:0 0 10px}
+.course-row{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:8px;cursor:pointer;transition:.15s}
+.course-row:hover{border-color:var(--cy);transform:translateY(-1px)}
+.course-row.locked{opacity:.5;cursor:default}
+.course-row.mastered{border-color:rgba(255,206,74,.45)}
+.cr-ic{font-size:24px;width:34px;text-align:center}
+.cr-main{flex:1}
+.cr-t{font-weight:700;font-size:14.5px}
+.cr-sub{font-size:11.5px;color:var(--mut);margin-top:2px}
+.cr-go{font-size:22px;color:var(--cy)}
+@media(max-width:768px){.lnav .btn{min-height:46px}.slot{min-width:46px;padding:4px 8px}.course-row{padding:14px}}
 </style>
 </head>
 <body class="theme-sql">
@@ -305,6 +334,7 @@ html,body{overflow-x:hidden}
     </div>
   </div>
   <button class="iconbtn" id="homeBtn" title="Switch game">⇄</button>
+  <button class="iconbtn" id="viewBtn" title="Course view">📚</button>
   <button class="iconbtn" id="domBtn" title="Banking examples">🏦</button>
   <button class="iconbtn" id="achvBtn" title="Achievements">🏆</button>
   <button class="iconbtn" id="resetBtn" title="Reset progress">↺</button>
@@ -320,6 +350,8 @@ html,body{overflow-x:hidden}
     </svg>
   </div>
 </div>
+
+<div id="course"></div>
 
 <div id="zoomctl">
   <button class="iconbtn" id="zin">＋</button>
@@ -1231,6 +1263,10 @@ INSERT INTO loans VALUES
 (4,4,8000,9.0,'default'),(5,5,30000,6.5,'active'),(6,2,12000,8.0,'paid');
 `; GAMES.databricks.bank={"lakehouse": {"explore": {"intro": "The sample lakehouse holds a bank's core tables. Run this to meet them (Spark SQL ≈ the sandbox).", "examples": [{"label": "All accounts", "query": "SELECT * FROM accounts;"}, {"label": "All customers", "query": "SELECT * FROM customers;"}, {"label": "All transactions", "query": "SELECT * FROM transactions;"}]}}, "catalogs": {"explore": {"intro": "In Databricks these are main.bank.accounts etc. Query the sample tables here.", "examples": [{"label": "Accounts", "query": "SELECT * FROM accounts;"}, {"label": "Name + country", "query": "SELECT name, country FROM customers;"}, {"label": "Accts per segment", "query": "SELECT segment, COUNT(*) AS n FROM customers GROUP BY segment;"}]}}, "sparksql": {"practice": {"type": "sql", "prompt": "Return the <code>a_id</code> and <code>balance</code> of every account.", "expected": "SELECT a_id, balance FROM accounts", "ordered": false, "hints": ["SELECT a_id, balance FROM accounts"]}, "master": {"type": "sql", "prompt": "Show each account's <code>a_id</code>, <code>balance</code>, and balance <b>plus 5% interest</b> as a column.", "expected": "SELECT a_id, balance, balance*1.05 FROM accounts", "ordered": false, "hints": ["Multiply balance by 1.05.", "SELECT a_id, balance, balance * 1.05 FROM accounts"]}, "explore": {"intro": "Read and derive columns — the everyday moves for ad-hoc banking checks.", "examples": [{"label": "Balances", "query": "SELECT a_id, balance FROM accounts;"}, {"label": "With interest", "query": "SELECT a_id, balance, balance * 0.05 AS interest FROM accounts;"}]}}, "filtering": {"practice": {"type": "sql", "prompt": "Find all <code>savings</code> accounts.", "expected": "SELECT * FROM accounts WHERE acct_type='savings'", "ordered": false, "hints": ["Filter acct_type.", "SELECT * FROM accounts WHERE acct_type = 'savings'"]}, "master": {"type": "sql", "prompt": "Find accounts with a balance <b>over 10,000</b>.", "expected": "SELECT * FROM accounts WHERE balance>10000", "ordered": false, "hints": ["Use > on balance.", "SELECT * FROM accounts WHERE balance > 10000"]}, "elite": {"type": "sql", "prompt": "Find accounts that are <b>savings over 20,000 OR credit with a negative balance</b>.", "expected": "SELECT * FROM accounts WHERE (acct_type='savings' AND balance>20000) OR (acct_type='credit' AND balance<0)", "ordered": false, "hints": ["Two grouped conditions joined by OR.", "SELECT * FROM accounts WHERE (acct_type='savings' AND balance>20000) OR (acct_type='credit' AND balance<0)"]}, "explore": {"intro": "Filter the account book the way you would when chasing a banking ticket — by type, balance band, or status.", "examples": [{"label": "Savings accounts", "query": "SELECT * FROM accounts WHERE acct_type='savings';"}, {"label": "High balance", "query": "SELECT * FROM accounts WHERE balance > 10000;"}, {"label": "Dormant accounts", "query": "SELECT * FROM accounts WHERE status='dormant';"}]}}, "aggregations": {"practice": {"type": "sql", "prompt": "Count how many accounts are in <b>each account type</b>.", "expected": "SELECT acct_type, COUNT(*) FROM accounts GROUP BY acct_type", "ordered": false, "hints": ["GROUP BY acct_type.", "SELECT acct_type, COUNT(*) FROM accounts GROUP BY acct_type"]}, "master": {"type": "sql", "prompt": "Total balance held in <b>each account type</b>.", "expected": "SELECT acct_type, SUM(balance) FROM accounts GROUP BY acct_type", "ordered": false, "hints": ["SUM(balance) with GROUP BY acct_type.", "SELECT acct_type, SUM(balance) FROM accounts GROUP BY acct_type"]}, "boss": {"type": "sql", "prompt": "⚔️ BOSS — Count accounts with a balance <b>over 1,000</b> in each account type. (WHERE + GROUP BY.)", "expected": "SELECT acct_type, COUNT(*) FROM accounts WHERE balance>1000 GROUP BY acct_type", "ordered": false, "hints": ["Filter WHERE balance > 1000, then GROUP BY.", "SELECT acct_type, COUNT(*) FROM accounts WHERE balance > 1000 GROUP BY acct_type"]}, "elite": {"type": "sql", "prompt": "Each account type with its count and average balance — only types whose <b>average balance exceeds 5,000</b>.", "expected": "SELECT acct_type, COUNT(*), AVG(balance) FROM accounts GROUP BY acct_type HAVING AVG(balance)>5000", "ordered": false, "hints": ["HAVING AVG(balance) > 5000.", "SELECT acct_type, COUNT(*), AVG(balance) FROM accounts GROUP BY acct_type HAVING AVG(balance) > 5000"]}, "explore": {"intro": "Per-segment summaries — balances per account type, transactions per channel — the core of banking MI reports.", "examples": [{"label": "Per account type", "query": "SELECT acct_type, COUNT(*) AS n, SUM(balance) AS total FROM accounts GROUP BY acct_type;"}, {"label": "Txns per channel", "query": "SELECT channel, COUNT(*) AS n, SUM(amount) AS value FROM transactions GROUP BY channel;"}, {"label": "Accounts per customer", "query": "SELECT c_id, COUNT(*) AS accts FROM accounts GROUP BY c_id;"}]}}, "joins": {"practice": {"type": "sql", "prompt": "Show each account's <code>a_id</code> and the <b>customer name</b> who owns it.", "expected": "SELECT accounts.a_id, customers.name FROM accounts JOIN customers ON accounts.c_id=customers.c_id", "ordered": false, "hints": ["JOIN accounts to customers on c_id.", "SELECT accounts.a_id, customers.name FROM accounts JOIN customers ON accounts.c_id = customers.c_id"]}, "master": {"type": "sql", "prompt": "For every transaction, show <b>t_id, the account type, and amount</b>.", "expected": "SELECT transactions.t_id, accounts.acct_type, transactions.amount FROM transactions JOIN accounts ON transactions.a_id=accounts.a_id", "ordered": false, "hints": ["Join transactions to accounts on a_id.", "SELECT transactions.t_id, accounts.acct_type, transactions.amount FROM transactions JOIN accounts ON transactions.a_id = accounts.a_id"]}, "boss": {"type": "sql", "prompt": "⚔️ BOSS — List the <b>name</b> and account <b>balance</b> for every customer with an <code>active</code> account. (JOIN + WHERE.)", "expected": "SELECT customers.name, accounts.balance FROM customers JOIN accounts ON customers.c_id=accounts.c_id WHERE accounts.status='active'", "ordered": false, "hints": ["Join customers↔accounts, filter status = active.", "SELECT customers.name, accounts.balance FROM customers JOIN accounts ON customers.c_id = accounts.c_id WHERE accounts.status = 'active'"]}, "elite": {"type": "sql", "prompt": "Show each account's <code>a_id</code> and its <b>total transaction amount</b> — including accounts with no transactions (show 0). (LEFT JOIN + SUM + COALESCE.)", "expected": "SELECT accounts.a_id, COALESCE(SUM(transactions.amount),0) FROM accounts LEFT JOIN transactions ON accounts.a_id=transactions.a_id GROUP BY accounts.a_id", "ordered": false, "hints": ["FROM accounts LEFT JOIN transactions, SUM wrapped in COALESCE(...,0).", "SELECT accounts.a_id, COALESCE(SUM(transactions.amount),0) FROM accounts LEFT JOIN transactions ON accounts.a_id = transactions.a_id GROUP BY accounts.a_id"]}, "explore": {"intro": "Reconnect accounts to customers and transactions — turning IDs into names, the move behind most banking support queries.", "examples": [{"label": "Account → owner", "query": "SELECT accounts.a_id, customers.name, accounts.balance\nFROM accounts JOIN customers ON accounts.c_id = customers.c_id;"}, {"label": "Txn → account", "query": "SELECT transactions.t_id, accounts.acct_type, transactions.amount\nFROM transactions JOIN accounts ON transactions.a_id = accounts.a_id;"}]}}, "windows": {"practice": {"type": "sql", "prompt": "Rank accounts by balance, highest first. Show <code>a_id</code>, <code>balance</code> and the rank, ordered by balance descending.", "expected": "SELECT a_id, balance, RANK() OVER (ORDER BY balance DESC) AS rnk FROM accounts ORDER BY balance DESC", "ordered": true, "hints": ["RANK() OVER (ORDER BY balance DESC), and ORDER BY balance DESC.", "SELECT a_id, balance, RANK() OVER (ORDER BY balance DESC) AS rnk FROM accounts ORDER BY balance DESC"]}, "master": {"type": "sql", "prompt": "Within each account type, number accounts from highest balance (1) down. Show acct_type, a_id, that number.", "expected": "SELECT acct_type, a_id, ROW_NUMBER() OVER (PARTITION BY acct_type ORDER BY balance DESC) AS rn FROM accounts", "ordered": false, "hints": ["ROW_NUMBER() OVER (PARTITION BY acct_type ORDER BY balance DESC).", "SELECT acct_type, a_id, ROW_NUMBER() OVER (PARTITION BY acct_type ORDER BY balance DESC) AS rn FROM accounts"]}, "elite": {"type": "sql", "prompt": "Return only the <b>highest-balance account per type</b> — a_id, acct_type, balance. (Window in a subquery, keep rank 1.)", "expected": "SELECT a_id, acct_type, balance FROM (SELECT a_id, acct_type, balance, ROW_NUMBER() OVER (PARTITION BY acct_type ORDER BY balance DESC) AS rn FROM accounts) WHERE rn=1", "ordered": false, "hints": ["ROW_NUMBER per type in a subquery, then WHERE rn = 1.", "SELECT a_id, acct_type, balance FROM (SELECT a_id, acct_type, balance, ROW_NUMBER() OVER (PARTITION BY acct_type ORDER BY balance DESC) AS rn FROM accounts) WHERE rn = 1"]}, "explore": {"intro": "Rankings and running totals over the ledger — leaderboards of balances, running transaction totals per account.", "examples": [{"label": "Rank by balance", "query": "SELECT a_id, balance, RANK() OVER (ORDER BY balance DESC) AS rnk FROM accounts;"}, {"label": "Running txn total", "query": "SELECT t_id, amount, SUM(amount) OVER (ORDER BY t_id) AS running FROM transactions;"}, {"label": "Rank within type", "query": "SELECT acct_type, a_id, balance, ROW_NUMBER() OVER (PARTITION BY acct_type ORDER BY balance DESC) AS rn FROM accounts;"}]}}, "ctes": {"practice": {"type": "sql", "prompt": "Using a CTE named <code>big</code> holding accounts with balance over 10,000, count how many there are <b>per account type</b>.", "expected": "WITH big AS (SELECT * FROM accounts WHERE balance>10000) SELECT acct_type, COUNT(*) FROM big GROUP BY acct_type", "ordered": false, "hints": ["WITH big AS (SELECT * FROM accounts WHERE balance > 10000) then GROUP BY.", "WITH big AS (SELECT * FROM accounts WHERE balance > 10000) SELECT acct_type, COUNT(*) FROM big GROUP BY acct_type"]}, "master": {"type": "sql", "prompt": "Use a CTE of each customer's account count, then list every customer's <b>name and count (0 if none)</b>.", "expected": "WITH ac AS (SELECT c_id, COUNT(*) AS n FROM accounts GROUP BY c_id) SELECT customers.name, COALESCE(ac.n,0) FROM customers LEFT JOIN ac ON customers.c_id=ac.c_id", "ordered": false, "hints": ["CTE counts accounts per c_id; LEFT JOIN customers; COALESCE(n,0).", "WITH ac AS (SELECT c_id, COUNT(*) AS n FROM accounts GROUP BY c_id) SELECT customers.name, COALESCE(ac.n,0) FROM customers LEFT JOIN ac ON customers.c_id = ac.c_id"]}, "explore": {"intro": "Break a complex banking query into named, testable steps with WITH.", "examples": [{"label": "Filter then group", "query": "WITH big AS (SELECT * FROM accounts WHERE balance > 10000)\nSELECT acct_type, COUNT(*) AS n FROM big GROUP BY acct_type;"}, {"label": "CTE + join", "query": "WITH ac AS (SELECT c_id, COUNT(*) AS n FROM accounts GROUP BY c_id)\nSELECT customers.name, ac.n FROM customers JOIN ac ON customers.c_id = ac.c_id;"}]}}, "dates": {"explore": {"intro": "Time-box transactions; substr(txn_ts,1,7) gives the YYYY-MM month (portable).", "examples": [{"label": "April txns", "query": "SELECT * FROM transactions WHERE txn_ts BETWEEN '2024-04-01' AND '2024-04-30 23:59:59';"}, {"label": "Per month", "query": "SELECT substr(txn_ts,1,7) AS month, COUNT(*) AS n FROM transactions GROUP BY month;"}, {"label": "Recent first", "query": "SELECT * FROM transactions ORDER BY txn_ts DESC;"}]}}, "casequal": {"practice": {"type": "sql", "prompt": "Label each account <code>a_id</code> as <b>'high-value'</b> when balance ≥ 10,000, else <b>'standard'</b>.", "expected": "SELECT a_id, CASE WHEN balance>=10000 THEN 'high-value' ELSE 'standard' END FROM accounts", "ordered": false, "hints": ["CASE WHEN balance >= 10000 THEN ... ELSE ... END.", "SELECT a_id, CASE WHEN balance >= 10000 THEN 'high-value' ELSE 'standard' END FROM accounts"]}, "master": {"type": "sql", "prompt": "Show each account id with status group: <b>'open'</b> for active or dormant, <b>'closed'</b> otherwise.", "expected": "SELECT a_id, CASE WHEN status IN ('active','dormant') THEN 'open' ELSE 'closed' END FROM accounts", "ordered": false, "hints": ["CASE WHEN status IN ('active','dormant') ...", "SELECT a_id, CASE WHEN status IN ('active','dormant') THEN 'open' ELSE 'closed' END FROM accounts"]}, "elite": {"type": "sql", "prompt": "Count accounts in each balance tier: <b>private</b> (≥50k), <b>mid</b> (5k–49,999), <b>mass</b> (&lt;5k). (CASE + GROUP BY.)", "expected": "SELECT CASE WHEN balance>=50000 THEN 'private' WHEN balance>=5000 THEN 'mid' ELSE 'mass' END AS tier, COUNT(*) FROM accounts GROUP BY tier", "ordered": false, "hints": ["Put the CASE in SELECT with an alias, GROUP BY that alias.", "SELECT CASE WHEN balance>=50000 THEN 'private' WHEN balance>=5000 THEN 'mid' ELSE 'mass' END AS tier, COUNT(*) FROM accounts GROUP BY tier"]}, "explore": {"intro": "Map raw banking codes into readable segments and risk flags.", "examples": [{"label": "Balance tiers", "query": "SELECT a_id, balance,\n  CASE WHEN balance>=50000 THEN 'private'\n       WHEN balance>=5000 THEN 'mid'\n       ELSE 'mass' END AS tier\nFROM accounts;"}, {"label": "Overdrawn flag", "query": "SELECT a_id, balance, CASE WHEN balance<0 THEN 'overdrawn' ELSE 'ok' END AS flag FROM accounts;"}]}}, "troubleshooting": {"elite": {"type": "sql", "prompt": "Identify the <b>single top customer by total balance</b> — name and total.", "expected": "SELECT customers.name, SUM(accounts.balance) AS bal FROM customers JOIN accounts ON customers.c_id=accounts.c_id GROUP BY customers.c_id ORDER BY bal DESC LIMIT 1", "ordered": true, "hints": ["Sum balances per customer, ORDER BY DESC, LIMIT 1.", "SELECT customers.name, SUM(accounts.balance) AS bal FROM customers JOIN accounts ON customers.c_id = accounts.c_id GROUP BY customers.c_id ORDER BY bal DESC LIMIT 1"]}, "explore": {"intro": "Banking diagnostics that run live in the sandbox — skew, reconciliation, orphans.", "examples": [{"label": "Txns per account (skew)", "query": "SELECT a_id, COUNT(*) AS txns FROM transactions GROUP BY a_id ORDER BY txns DESC;"}, {"label": "Balance by status", "query": "SELECT status, COUNT(*) AS n, SUM(balance) AS total FROM accounts GROUP BY status;"}, {"label": "Orphan transactions", "query": "SELECT * FROM transactions WHERE a_id NOT IN (SELECT a_id FROM accounts);"}]}}};
 
+/* ===================== COURSE SECTIONS ===================== */
+GAMES.sql.sections=[["Foundations",["tables","rows","select"]],["Filtering & Sorting",["where","orderby","distinct"]],["Aggregation",["aggregations","groupby","having"]],["Joining Tables",["joins","leftjoin","subqueries"]],["Data & Analytics Toolkit",["nulls","caseexpr","text","dates","unionnode","dupes","windows","cte"]],["Performance & Operations",["indexes","transactions","diagnostics"]]];
+GAMES.databricks.sections=[["Lakehouse Basics",["lakehouse","catalogs"]],["Spark SQL",["sparksql","filtering","aggregations","joins","windows","ctes","dates","casequal"]],["Delta Lake",["delta","merge","timetravel","optimize","vacuum","partitioning"]],["PySpark",["pyspark","pysparkops"]],["Platform & Ops",["unity","clusters","jobs","troubleshooting"]]];
+
 /* ===================== ACTIVE-GAME STATE ===================== */
 let G=null, NODES=[], ACHIEVEMENTS=[], byId={}, SAVE_KEY='';
 function defaultState(){ return {xp:0, solved:{}, eliteSolved:{}, achievements:[], combo:0, bestCombo:0, cleanSolves:0, queriesRun:0, difficulty:'med'}; }
@@ -1379,16 +1415,16 @@ function updateGuide(){
 /* ===================== MODAL ===================== */
 const overlay=document.getElementById('overlay'), modal=document.getElementById('modal');
 let activeNode=null, activeTab='discover', hintIdx=0, attemptCount={};
-function openNode(n){ if(nodeStatus(n)==='locked'){ toast('🔒','Locked','Master its prerequisites first.'); return; } activeNode=n; activeTab='discover'; renderModal(); overlay.classList.add('on'); }
-function closeModal(){ overlay.classList.remove('on'); activeNode=null; }
+function openNode(n){ if(nodeStatus(n)==='locked'){ toast('🔒','Locked','Master its prerequisites first.'); return; } activeNode=n; activeTab='learn'; learnStep=0; renderModal(); overlay.classList.add('on'); }
+function closeModal(){ overlay.classList.remove('on'); activeNode=null; var c=document.getElementById('course'); if(c&&c.classList.contains('on')) renderCourse(); }
 overlay.onclick=e=>{ if(e.target===overlay) closeModal(); };
 window.closeModal=closeModal;
 function renderModal(){
   const n=activeNode;
   const ch=challengeForMode(n);
-  const tabs=[{k:'discover',l:'📖 Discover'},{k:'explore',l:(n.explore&&n.explore.readonly?'📑 Reference':'🧪 Explore')}];
+  const tabs=[{k:'learn',l:'📚 Learn'},{k:'discover',l:'📖 Discover'},{k:'explore',l:(n.explore&&n.explore.readonly?'📑 Reference':'🧪 Explore')}];
   if(ch) tabs.push({k:'challenge',l:'🎯 Challenge'});
-  if(!tabs.find(t=>t.k===activeTab)) activeTab='discover';
+  if(!tabs.find(t=>t.k===activeTab)) activeTab='learn';
   const done=k=> k==='challenge' ? (ch && tierSolved(n,ch.kind)) : false;
   modal.innerHTML=
     '<div class="m-head"><div class="em">'+n.em+'</div><div><h2>'+n.title+'</h2>'+
@@ -1402,6 +1438,7 @@ function switchTab(k){ activeTab=k; renderModal(); }
 window.switchTab=switchTab;
 function renderTab(){
   const n=activeNode, body=document.getElementById('mbody');
+  if(activeTab==='learn'){ renderLearn(body,n); return; }
   if(activeTab==='discover'){ body.innerHTML='<h3>Discover</h3>'+n.discover+'<div class="btnrow"><button class="btn run" onclick="switchTab(\'explore\')">'+(n.explore&&n.explore.readonly?'See the commands →':'Try it in the sandbox →')+'</button></div>'; return; }
   if(activeTab==='explore'){ renderExplore(body,n); return; }
   const sel=challengeForMode(n);
@@ -1471,6 +1508,106 @@ function explainSQL(sql){ try{ const s=(''+sql).replace(/\s+/g,' ').trim().repla
   if(gl) html+='<div class="gl"><b>Words used:</b> '+gl+'</div>';
   html+='<div class="gl" style="opacity:.85">💡 Even though you read it top-to-bottom, SQL actually runs in this order: <b>FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT</b>.</div></div>'; return html; }catch(e){ return ''; } }
 function showExplain(id,spec){ const hb=document.getElementById(id+'_hints'); if(hb && !hb.querySelector('.explain')) hb.insertAdjacentHTML('beforeend', explainSQL(spec.expected)); }
+/* ===================== GUIDED LESSONS / MENTOR / COURSE ===================== */
+let learnStep=0;
+function _shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function buildFill(expected){
+  const s=(''+expected).replace(/\s+/g,' ').trim().replace(/;+$/,''); const up=s.toUpperCase();
+  const KW=['LEFT JOIN','INNER JOIN','GROUP BY','ORDER BY','UNION ALL','SELECT','FROM','WHERE','HAVING','JOIN','ON','UNION','LIMIT','DISTINCT'];
+  let i=0, out=[], cap=5, nb=0;
+  while(i<s.length){
+    let m=null;
+    if(nb<cap){ for(const kw of KW){ if(up.startsWith(kw,i)){ const b=i===0?' ':up[i-1]; const a=up[i+kw.length]===undefined?' ':up[i+kw.length]; if(!/[A-Z0-9_]/.test(b)&&!/[A-Z0-9_]/.test(a)){ m=s.substr(i,kw.length); break; } } } }
+    if(m){ out.push({blank:nb, ans:m}); nb++; i+=m.length; }
+    else { if(out.length && out[out.length-1].lit!==undefined) out[out.length-1].lit+=s[i]; else out.push({lit:s[i]}); i++; }
+  }
+  return {out:out, n:nb};
+}
+function renderFillBlank(lb, spec){
+  const fb=buildFill(spec.expected); const id='fb'+rnd();
+  const ans=fb.out.filter(x=>x.blank!==undefined).map(x=>x.ans);
+  const used={}; ans.forEach(a=>used[a.toUpperCase()]=1);
+  const distract=['WHERE','GROUP BY','ORDER BY','HAVING','JOIN','DISTINCT'].filter(k=>!used[k]).slice(0,2);
+  const bank=_shuffle(ans.concat(distract));
+  lb.innerHTML='<h3>Fill in the blanks</h3><p>Tap the keywords to drop them into the gaps and rebuild the query skeleton. Tap a filled gap to clear it.</p>'+
+    '<div class="fillsql" id="'+id+'_sql"></div>'+
+    '<div class="bank" id="'+id+'_bank">'+bank.map(t=>'<button class="tok" data-v="'+escapeHtml(t)+'">'+escapeHtml(t)+'</button>').join('')+'</div>'+
+    '<div class="btnrow"><button class="btn run" id="'+id+'_chk">Check</button><button class="btn ghost" id="'+id+'_rst">Reset</button></div><div id="'+id+'_o"></div>';
+  let filled=new Array(fb.n).fill(null);
+  function draw(){
+    const sq=document.getElementById(id+'_sql'); let h='';
+    fb.out.forEach(x=>{ if(x.lit!==undefined) h+=escapeHtml(x.lit); else { const v=filled[x.blank]; h+='<span class="slot'+(v?' on':'')+'" data-b="'+x.blank+'">'+(v?escapeHtml(v):'▢')+'</span>'; } });
+    sq.innerHTML=h;
+    sq.querySelectorAll('.slot').forEach(sl=>sl.onclick=()=>{ const b=+sl.dataset.b; if(filled[b]!==null){ filled[b]=null; draw(); } });
+    const bk=document.getElementById(id+'_bank'); const cnt={}; filled.forEach(v=>{ if(v) cnt[v]=(cnt[v]||0)+1; }); const seen={};
+    bk.querySelectorAll('.tok').forEach(t=>{ const v=t.dataset.v; seen[v]=(seen[v]||0)+1; t.classList.toggle('used', seen[v]<=(cnt[v]||0));
+      t.onclick=()=>{ if(t.classList.contains('used'))return; const nx=filled.indexOf(null); if(nx<0)return; filled[nx]=v; draw(); }; });
+  }
+  draw();
+  document.getElementById(id+'_rst').onclick=()=>{ filled=new Array(fb.n).fill(null); draw(); document.getElementById(id+'_o').innerHTML=''; };
+  document.getElementById(id+'_chk').onclick=()=>{ const o=document.getElementById(id+'_o');
+    if(filled.indexOf(null)>=0){ o.innerHTML='<div class="res-msg err">Fill every gap first.</div>'; return; }
+    let ok=true; fb.out.forEach(x=>{ if(x.blank!==undefined && (filled[x.blank]||'').toUpperCase()!==x.ans.toUpperCase()) ok=false; });
+    o.innerHTML= ok ? '<div class="res-msg win">🎉 Perfect — that is the correct structure!</div>'+explainSQL(spec.expected)
+                    : '<div class="res-msg err">Not quite — some keywords are in the wrong gap. Tap a gap to clear it and retry.</div>';
+  };
+}
+function renderExampleStep(lb,n){
+  const ex=cExplore(n);
+  if(ex.readonly){ lb.innerHTML='<h3>Worked example</h3><p>'+ex.intro+'</p><div class="viz"><pre class="codeblock">'+escapeHtml(ex.examples[0].code)+'</pre></div>'; return; }
+  const id='lx'+rnd(); const q=ex.examples[0].query;
+  lb.innerHTML='<h3>Worked example</h3><p>'+ex.intro+'</p><div class="viz"><pre class="codeblock">'+escapeHtml(q)+'</pre></div><div class="btnrow"><button class="btn run" id="'+id+'_r">▶ Run this example</button></div><div id="'+id+'_o"></div>';
+  const o=document.getElementById(id+'_o');
+  function run(){ const r=runSQL(q); o.innerHTML=(r.ok?'<div class="res-msg ok">✅ '+r.values.length+' row(s)</div>'+tableHtml(r):'<div class="res-msg err">'+escapeHtml(r.error)+'</div>')+explainSQL(q); }
+  document.getElementById(id+'_r').onclick=run; run();
+}
+function learnSteps(n){ const steps=['theory','example']; const core=ladder(n)[0];
+  if(core && core.spec.type==='sql'){ steps.push('fill'); steps.push('write'); } else if(core){ steps.push('task'); } return steps; }
+function renderLearn(body,n){
+  const steps=learnSteps(n); if(learnStep>=steps.length) learnStep=steps.length-1; if(learnStep<0) learnStep=0;
+  const step=steps[learnStep], core=ladder(n)[0], last=learnStep===steps.length-1;
+  body.innerHTML='<div class="lprog"><div class="lprog-bar"><div style="width:'+Math.round(100*(learnStep+1)/steps.length)+'%"></div></div><span>Step '+(learnStep+1)+' of '+steps.length+'</span></div><div id="lbody"></div><div class="lnav"><button class="btn ghost" id="lback">← Back</button><button class="btn run" id="lnext">Next →</button></div>';
+  const lb=document.getElementById('lbody');
+  if(step==='theory') lb.innerHTML='<h3>Learn — '+n.title+'</h3>'+n.discover;
+  else if(step==='example') renderExampleStep(lb,n);
+  else if(step==='fill') renderFillBlank(lb, core.spec);
+  else if(step==='write') renderChallenge(lb, core.spec, core.kind);
+  else if(step==='task'){ if(core.spec.type==='quiz') renderQuiz(lb,core.spec,core.kind); else renderChallenge(lb,core.spec,core.kind); }
+  const back=document.getElementById('lback'), next=document.getElementById('lnext');
+  back.style.display=learnStep>0?'':'none';
+  back.onclick=()=>{ if(learnStep>0){ learnStep--; renderLearn(body,n); } };
+  if(last){ next.textContent='Next chapter →'; next.onclick=()=>openNextChapter(n); }
+  else { next.textContent='Next →'; next.onclick=()=>{ learnStep++; renderLearn(body,n); }; }
+}
+function mentorFeedback(userSql, expectedSql, u, e){
+  try{
+    const tips=[];
+    const uc=_clauses((''+userSql).replace(/\s+/g,' ')), ec=_clauses((''+expectedSql).replace(/\s+/g,' '));
+    const uk={}, ek={}; uc.forEach(c=>uk[c[0]]=1); ec.forEach(c=>ek[c[0]]=1);
+    ['WHERE','GROUP BY','HAVING','ORDER BY','JOIN','LEFT JOIN','LIMIT','DISTINCT','UNION'].forEach(k=>{
+      if(ek[k]&&!uk[k]) tips.push('The answer needs a <code>'+k+'</code> clause — yours is missing it.');
+      else if(uk[k]&&!ek[k]) tips.push('You used <code>'+k+'</code>, but the answer does not need it.');
+    });
+    const ut=((''+userSql).match(/FROM\s+([\w]+)/i)||[])[1], et=((''+expectedSql).match(/FROM\s+([\w]+)/i)||[])[1];
+    if(ut&&et&&ut.toLowerCase()!==et.toLowerCase()) tips.push('Check the table: the answer reads from <code>'+escapeHtml(et)+'</code>, you used <code>'+escapeHtml(ut)+'</code>.');
+    if(u&&e&&u.values&&e.values&&u.values.length!==e.values.length) tips.push('You returned <b>'+u.values.length+'</b> row(s) but <b>'+e.values.length+'</b> were expected — your filter or grouping is off.');
+    else if(u&&e&&u.columns&&e.columns&&u.columns.length!==e.columns.length) tips.push('You selected <b>'+u.columns.length+'</b> column(s); the answer has <b>'+e.columns.length+'</b>.');
+    if(!tips.length) return '<div class="mentor"><b>🧠 Mentor:</b> Right shape, wrong details — compare your values against what the question asks, or tap <b>💡 Hint</b>.</div>';
+    return '<div class="mentor"><b>🧠 Mentor — here is what looks off:</b><ul>'+tips.slice(0,3).map(t=>'<li>'+t+'</li>').join('')+'</ul></div>';
+  }catch(err){ return ''; }
+}
+function courseFlat(){ const o=[]; (G&&G.sections||[]).forEach(s=>s[1].forEach(id=>{ if(byId[id]) o.push(id); })); return o; }
+function openNextChapter(n){ const f=courseFlat(); const i=f.indexOf(n.id); for(let j=i+1;j<f.length;j++){ const nn=byId[f[j]]; if(nn && nodeStatus(nn)!=='locked'){ closeModal(); openNode(nn); return; } } toast('🎓','Great progress','You have reached the end of the unlocked chapters — keep clearing tiers to open more.'); }
+function renderCourse(){ const el=document.getElementById('course'); if(!G){ el.innerHTML=''; return; }
+  let h='<div class="course-inner"><h2 class="course-title">'+G.title+' — Course path</h2><p style="color:var(--mut);font-size:13px;margin-bottom:18px">Work top to bottom. Each chapter opens the guided lesson: theory → example → fill-the-gaps → write it yourself.</p>';
+  (G.sections||[]).forEach((sec,si)=>{ h+='<div class="course-sec"><div class="course-sec-h">'+(si+1)+'. '+sec[0]+'</div>';
+    sec[1].forEach(id=>{ const nn=byId[id]; if(!nn) return; const st=nodeStatus(nn), pct=nodeProgress(nn);
+      h+='<div class="course-row '+st+'" data-id="'+id+'"><div class="cr-ic">'+(st==='locked'?'🔒':st==='mastered'?'👑':nn.em)+'</div><div class="cr-main"><div class="cr-t">'+nn.title+'</div><div class="cr-sub">'+nn.diff+' · '+nn.xp+' XP · '+(st==='locked'?'locked':st==='available'?'ready':st==='mastered'?'done':pct+'% done')+'</div></div><div class="cr-go">'+(st==='locked'?'':'›')+'</div></div>'; });
+    h+='</div>'; });
+  h+='</div>'; el.innerHTML=h;
+  el.querySelectorAll('.course-row').forEach(r=>r.onclick=()=>{ const nn=byId[r.dataset.id]; if(nodeStatus(nn)==='locked'){ toast('🔒','Locked','Finish earlier chapters first.'); return; } openNode(nn); });
+}
+function showCourseView(on){ const c=document.getElementById('course'); if(!c) return; c.classList.toggle('on',!!on); const vb=document.getElementById('viewBtn'); if(vb){ vb.classList.toggle('active',!!on); vb.title=on?'Back to tree':'Course view'; } if(on) renderCourse(); }
 function renderExplore(body,n){
   const ex=cExplore(n);
   if(ex.readonly){
@@ -1551,7 +1688,8 @@ function checkAndShow(spec,kind,sql,resEl,id){
     awardSolve(n,kind,clean);
     resEl.innerHTML='<div class="res-msg win">🎉 Correct! '+(isElite?'Elite tier cleared!':isBoss?'Boss defeated!':'Tier cleared!')+'</div>'+tableHtml(r.user)+explainSQL(spec.expected)+'<div class="hintbox" style="margin-top:10px">✅ Cleared! Switch <b>Low / Med / High</b> above to try a tougher version of this node.</div>';
   } else {
-    resEl.innerHTML='<div class="res-msg err">❌ Not quite — your result doesn\'t match what\'s expected.</div>'+tableHtml(r.user);
+    const ev=runSQL(spec.expected);
+    resEl.innerHTML='<div class="res-msg err">❌ Not quite — your result doesn\'t match what\'s expected.</div>'+tableHtml(r.user)+mentorFeedback(sql,spec.expected,r.user,ev.ok?ev:null);
     bumpAttempt(id,key,resEl); breakCombo(); save();
   }
 }
@@ -1681,7 +1819,7 @@ function selectGame(id){
   G=GAMES[id]; NODES=G.NODES; ACHIEVEMENTS=G.ACHIEVEMENTS;
   byId=Object.fromEntries(NODES.map(n=>[n.id,n]));
   SAVE_KEY=G.saveKey; state=loadState(); attemptCount={};
-  applyTheme(); updateDomBtn(); reflectHomeDom(); rebuildDB(); closeModal();
+  applyTheme(); updateDomBtn(); reflectHomeDom(); rebuildDB(); closeModal(); showCourseView(false);
   layoutTree(); renderTree(); renderAchv();
   document.getElementById('home').classList.remove('shown');
   fit();
@@ -1689,8 +1827,9 @@ function selectGame(id){
 document.querySelectorAll('.game-card').forEach(c=>c.onclick=()=>selectGame(c.dataset.g));
 document.querySelectorAll('#homeDom button').forEach(b=>b.onclick=()=>setDomainHome(b.dataset.dom));
 document.getElementById('domBtn').onclick=()=>{ setDomain(DOMAIN==='banking'?'general':'banking'); if(activeNode) renderModal(); };
+document.getElementById('viewBtn').onclick=()=>{ const c=document.getElementById('course'); showCourseView(!c.classList.contains('on')); };
 setDomainHome(DOMAIN);
-document.getElementById('homeBtn').onclick=()=>{ if(G) save(); document.getElementById('home').classList.add('shown'); };
+document.getElementById('homeBtn').onclick=()=>{ if(G) save(); showCourseView(false); document.getElementById('home').classList.add('shown'); };
 
 /* ===================== INIT ===================== */
 bootEngine();
