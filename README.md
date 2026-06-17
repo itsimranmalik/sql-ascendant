@@ -7,6 +7,8 @@
 
 Progress is saved separately for each game (different `localStorage` keys), so playing one never affects the other. The theme switches automatically (blue/purple for SQL, red/orange for Databricks).
 
+**Banking mode:** a 🏦 toggle (on the home screen, in the top bar, and inside every lesson) swaps the sample dataset and all runnable examples/challenges to a **banking schema** (`customers · accounts · transactions · loans`) — relevant for an app-support engineer working with financial data. Flip back to "General" anytime; concept explanations and quizzes stay the same. You can also change **Low / Med / High difficulty right inside a challenge** (handy on mobile where the top bar is hidden behind the full-screen lesson).
+
 **Play locally:** double-click `index.html`.
 
 > The older standalone files (`databricks.html`, `SQL-SkillTree.html`) are now redundant — `index.html` contains both. You can delete them.
