@@ -250,6 +250,12 @@ html,body{overflow-x:hidden}
 .dom-toggle button{border:none;background:transparent;color:#9aa6d6;font-weight:700;font-size:13px;padding:10px 16px;border-radius:9px;cursor:pointer;min-height:44px}
 .dom-toggle button.on{background:linear-gradient(135deg,#28e0ff,#7c5cff);color:#fff}
 @media (max-width:768px){.cd{min-height:42px;font-size:13px}}
+.explain{margin-top:12px;background:var(--glass);border:1px solid var(--line);border-left:3px solid var(--green);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.55}
+.explain ol{margin:8px 0 6px 20px;padding:0}
+.explain li{margin:6px 0}
+.explain .gl{margin-top:8px;font-size:12.5px;color:var(--mut)}
+.explain code{background:var(--soft);font-size:12.5px}
+@media (max-width:768px){.explain{font-size:14px}}
 </style>
 </head>
 <body class="theme-sql">
@@ -1423,6 +1429,48 @@ function wireToolbar(scope,ta){ scope.querySelectorAll('.tok').forEach(b=>b.addE
 function domToggleHTML(){ return '<div class="cbar"><div class="cdiff" data-kind="dom">'+[['general','General'],['banking','🏦 Banking']].map(p=>'<button class="cd '+(DOMAIN===p[0]?'on':'')+'" data-dom="'+p[0]+'">'+p[1]+'</button>').join('')+'</div></div>'; }
 function controlsHTML(){ return '<div class="cbar"><div class="cdiff">'+['low','med','high'].map(d=>'<button class="cd '+(state.difficulty===d?'on':'')+'" data-d="'+d+'">'+({low:'Low',med:'Med',high:'High'}[d])+'</button>').join('')+'</div><div class="cdiff" data-kind="dom">'+[['general','General'],['banking','🏦 Banking']].map(p=>'<button class="cd '+(DOMAIN===p[0]?'on':'')+'" data-dom="'+p[0]+'">'+p[1]+'</button>').join('')+'</div></div>'; }
 function wireControls(scope){ scope.querySelectorAll('.cd[data-d]').forEach(b=>b.onclick=()=>{ state.difficulty=b.dataset.d; save(); updateHUD(); renderModal(); }); scope.querySelectorAll('.cd[data-dom]').forEach(b=>b.onclick=()=>{ setDomain(b.dataset.dom); renderModal(); }); }
+/* ---- plain-English explainer for any SQL answer ---- */
+var esc=escapeHtml;
+function _kwAt(up,i){ const KWS=['UNION ALL','GROUP BY','ORDER BY','WITH','SELECT','FROM','WHERE','HAVING','LIMIT','UNION'];
+  for(const kw of KWS){ if(up.startsWith(kw,i)){ const b=i===0?' ':up[i-1]; const a=up[i+kw.length]===undefined?' ':up[i+kw.length];
+    if(!/[A-Z0-9_]/.test(b)&&!/[A-Z0-9_]/.test(a)) return kw; } } return null; }
+function _clauses(s){ const up=s.toUpperCase(); let depth=0,i=0,marks=[];
+  while(i<s.length){ const ch=s[i]; if(ch==='('){depth++;i++;continue;} if(ch===')'){depth--;i++;continue;}
+    if(depth===0){ const kw=_kwAt(up,i); if(kw){ marks.push([kw,i]); i+=kw.length; continue; } } i++; }
+  const out=[]; for(let m=0;m<marks.length;m++){ const a=marks[m]; const end=m+1<marks.length?marks[m+1][1]:s.length; out.push([a[0],s.slice(a[1]+a[0].length,end).trim()]); } return out; }
+function _condHint(w){ const m=w.match(/^\s*([\w.]+)\s*(>=|<=|!=|<>|=|>|<)\s*('?[\w%.@ +-]+'?)\s*$/); if(!m) return '';
+  const op={'=':'equals','>':'is greater than','<':'is less than','>=':'is at least','<=':'is at most','!=':'is not','<>':'is not'}[m[2]];
+  return ' (in plain words: '+esc(m[1])+' '+op+' '+esc(m[3])+')'; }
+function _selExpl(sel){ if(sel===undefined) return ''; const u=sel.toUpperCase();
+  if(/\bCOUNT\s*\(\s*\*\s*\)/.test(u) && sel.indexOf(',')<0 && !/\bGROUP BY\b/i.test(sel)) return 'Count how many rows are left and return that one number.';
+  if(/OVER\s*\(/i.test(sel)) return 'For each row, also work out a ranking or running number compared with the other rows (a <b>window function</b>) — and show the chosen columns.';
+  if(/\bCASE\b/i.test(sel)) return 'Show the columns, building one with <b>CASE</b> — which works like if/else, labelling each row depending on conditions.';
+  if(/^\s*DISTINCT/i.test(sel)) return 'Return only the <b>unique</b> values of <code>'+esc(sel.replace(/^\s*DISTINCT\s*/i,''))+'</code> (duplicates removed).';
+  const aggs=[]; ['COUNT','SUM','AVG','MIN','MAX'].forEach(a=>{ if(new RegExp('\\b'+a+'\\s*\\(','i').test(sel)) aggs.push(a); });
+  if(aggs.length) return 'Work out '+aggs.map(a=>({COUNT:'a count',SUM:'a sum',AVG:'an average',MIN:'the smallest',MAX:'the largest'}[a])).join(' and ')+' (per bucket if grouped) and show <code>'+esc(sel)+'</code>.';
+  if(/^\s*\*\s*$/.test(sel)) return 'Show <b>all columns</b> of the rows that remain.';
+  return 'Show these columns: <code>'+esc(sel)+'</code>.'; }
+function _gloss(s){ const u=s.toUpperCase(); const out=[];
+  [['COALESCE','COALESCE(a, b) → use a, or b if a is empty (NULL)'],['DISTINCT','DISTINCT → remove duplicate rows'],['LIKE','LIKE → text pattern match, % means "any characters"'],['SUBSTR','SUBSTR → cut out part of some text'],['INSTR','INSTR → find where a character sits in text'],['ROW_NUMBER','ROW_NUMBER() → number the rows 1, 2, 3…'],['RANK','RANK() → rank rows (ties share a rank)'],['STRFTIME','strftime → pull a part (e.g. the month) out of a date'],['IS NULL','IS NULL → the value is empty / missing'],['NOT IN','NOT IN → not present in that list']].forEach(p=>{ if(u.indexOf(p[0])>=0) out.push(p[1]); }); return out.join(' &nbsp;·&nbsp; '); }
+function explainSQL(sql){ try{ const s=(''+sql).replace(/\s+/g,' ').trim().replace(/;+$/,''); const cls=_clauses(s); if(!cls.length) return '';
+  const get=k=>cls.filter(c=>c[0]===k).map(c=>c[1]); const has=k=>cls.some(c=>c[0]===k); const steps=[];
+  get('WITH').forEach(w=>{ const nm=(w.match(/^(\w+)\s+AS/i)||[])[1]||'a helper'; steps.push('First build a temporary, named table <code>'+esc(nm)+'</code> from the query in brackets — then the rest uses it like a normal table. (This is a <b>CTE</b>: a way to write a query in clear steps.)'); });
+  if(has('UNION')||has('UNION ALL')) steps.push('Stack the rows of two queries on top of each other. <code>UNION</code> drops duplicate rows; <code>UNION ALL</code> keeps them all.');
+  const from=get('FROM')[0];
+  if(from){ const js=from.split(/\s+(LEFT JOIN|INNER JOIN|JOIN)\s+/i); const base=js[0].trim();
+    if(base[0]==='(') steps.push('Start from the result of the inner query in brackets (a <b>sub-query</b>), treated as a table.'); else steps.push('Start with the <code>'+esc(base)+'</code> table.');
+    for(let k=1;k<js.length;k+=2){ const jkw=js[k].toUpperCase(); const rest=js[k+1]||''; const onm=rest.split(/\s+WHERE\s+/i)[0]; const tbl=(onm.match(/^([\w.]+)/)||[])[1]||'another table'; const on=(onm.match(/\bON\b\s+(.*)$/i)||[])[1]||'';
+      if(jkw.indexOf('LEFT')>=0) steps.push('Attach <code>'+esc(tbl)+'</code> with a <b>LEFT JOIN</b> — keep every row from the left, even with no match (missing values come back empty/NULL)'+(on?', matched on <code>'+esc(on)+'</code>':'')+'.'); else steps.push('Join <code>'+esc(tbl)+'</code> — keep only rows that match on both sides'+(on?', matched on <code>'+esc(on)+'</code>':'')+'.'); } }
+  get('WHERE').forEach(w=>steps.push('Keep only the rows where <code>'+esc(w)+'</code>.'+_condHint(w)));
+  get('GROUP BY').forEach(g=>steps.push('Put the rows into buckets by <code>'+esc(g)+'</code>, so counts/totals are worked out <b>per bucket</b>.'));
+  get('HAVING').forEach(hh=>steps.push('From those buckets, keep only the ones where <code>'+esc(hh)+'</code>. (HAVING filters <b>groups</b>, after they are totalled — unlike WHERE, which filters rows beforehand.)'));
+  steps.push(_selExpl(get('SELECT')[0]));
+  get('ORDER BY').forEach(o=>{ const desc=/DESC/i.test(o); steps.push('Sort the result by <code>'+esc(o.replace(/\s+(ASC|DESC)\s*$/i,''))+'</code>, '+(desc?'<b>highest first</b>':'<b>lowest first</b>')+'.'); });
+  get('LIMIT').forEach(l=>steps.push('Finally, return only the first <b>'+esc(l)+'</b> row(s).'));
+  const gl=_gloss(s); let html='<div class="explain"><b>📖 How this answer works</b><ol>'+steps.filter(Boolean).map(x=>'<li>'+x+'</li>').join('')+'</ol>';
+  if(gl) html+='<div class="gl"><b>Words used:</b> '+gl+'</div>';
+  html+='<div class="gl" style="opacity:.85">💡 Even though you read it top-to-bottom, SQL actually runs in this order: <b>FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT</b>.</div></div>'; return html; }catch(e){ return ''; } }
+function showExplain(id,spec){ const hb=document.getElementById(id+'_hints'); if(hb && !hb.querySelector('.explain')) hb.insertAdjacentHTML('beforeend', explainSQL(spec.expected)); }
 function renderExplore(body,n){
   const ex=cExplore(n);
   if(ex.readonly){
@@ -1476,6 +1524,7 @@ function renderChallenge(body,spec,kind){
     '<textarea class="sqlbox" id="'+id+'" placeholder="Write your query here…"></textarea>'+
     '<div class="btnrow"><button class="btn run" id="'+id+'_run">▶ Run &amp; Check</button>'+
     '<button class="btn hint" id="'+id+'_hint">💡 Hint</button>'+
+    '<button class="btn hint" id="'+id+'_exp">📖 Explain</button>'+
     '<button class="btn reveal" id="'+id+'_rev" style="display:'+(state.difficulty==='low'?'':'none')+'">👁 Reveal answer</button></div>'+
     '<div id="'+id+'_hints"></div><div class="result" id="'+id+'_res"></div>';
   const ta=document.getElementById(id);
@@ -1484,7 +1533,8 @@ function renderChallenge(body,spec,kind){
   document.getElementById(id+'_hint').onclick=()=>{ const hb=document.getElementById(id+'_hints');
     if(hintIdx<spec.hints.length){ const h=document.createElement('div'); h.className='hintbox'; h.innerHTML='💡 '+spec.hints[hintIdx]; hb.appendChild(h); hintIdx++; }
     if(hintIdx>=spec.hints.length-1) document.getElementById(id+'_rev').style.display=''; };
-  document.getElementById(id+'_rev').onclick=()=>{ ta.value=spec.expected; toast('👁','Answer revealed','Run it, then try a variation to lock it in.'); };
+  document.getElementById(id+'_rev').onclick=()=>{ ta.value=spec.expected; showExplain(id,spec); toast('👁','Answer revealed','Read the breakdown below, then run it.'); };
+  document.getElementById(id+'_exp').onclick=()=>showExplain(id,spec);
   if(state.difficulty==='low'){ const hb=document.getElementById(id+'_hints'); const h=document.createElement('div'); h.className='hintbox'; h.innerHTML='💡 '+spec.hints[0]; hb.appendChild(h); hintIdx=1; }
   body.dataset.revealAt=revealAt;
 }
@@ -1495,12 +1545,11 @@ function checkAndShow(spec,kind,sql,resEl,id){
   state.queriesRun++; if(state.queriesRun>=12) unlock('explorer');
   if(r.error){ resEl.innerHTML='<div class="res-msg err">❌ '+escapeHtml(r.error)+'</div>'; bumpAttempt(id,key,resEl); breakCombo(); save(); return; }
   if(r.correct){
-    if(tierSolved(n,kind)){ resEl.innerHTML='<div class="res-msg ok">✅ Correct (already cleared).</div>'+tableHtml(r.user); return; }
+    if(tierSolved(n,kind)){ resEl.innerHTML='<div class="res-msg ok">✅ Correct (already cleared).</div>'+tableHtml(r.user)+explainSQL(spec.expected); return; }
     const clean=(attemptCount[key]||0)===0 && hintIdx===0;
     const isBoss=kind==='boss', isElite=kind==='elite';
-    resEl.innerHTML='<div class="res-msg win">🎉 Correct! '+(isElite?'Elite tier cleared!':isBoss?'Boss defeated!':'Tier cleared!')+'</div>'+tableHtml(r.user);
     awardSolve(n,kind,clean);
-    renderModal();
+    resEl.innerHTML='<div class="res-msg win">🎉 Correct! '+(isElite?'Elite tier cleared!':isBoss?'Boss defeated!':'Tier cleared!')+'</div>'+tableHtml(r.user)+explainSQL(spec.expected)+'<div class="hintbox" style="margin-top:10px">✅ Cleared! Switch <b>Low / Med / High</b> above to try a tougher version of this node.</div>';
   } else {
     resEl.innerHTML='<div class="res-msg err">❌ Not quite — your result doesn\'t match what\'s expected.</div>'+tableHtml(r.user);
     bumpAttempt(id,key,resEl); breakCombo(); save();
@@ -1521,8 +1570,8 @@ function renderQuiz(body,ch,kind){
   const wrap=document.getElementById('qopts'); wireControls(body);
   ch.options.forEach((opt,i)=>{ const b=document.createElement('button'); b.className='quiz-opt'; b.innerHTML=opt;
     b.onclick=()=>{ document.querySelectorAll('.quiz-opt').forEach(x=>x.style.pointerEvents='none');
-      if(i===ch.answer){ b.classList.add('right'); document.getElementById('qres').innerHTML='<div class="res-msg win">🎉 Correct!</div>';
-        if(!state.solved[cid(n.id,kind)]) awardSolve(n,kind,true); setTimeout(renderModal,900);
+      if(i===ch.answer){ b.classList.add('right'); document.getElementById('qres').innerHTML='<div class="res-msg win">🎉 Correct!</div>'+(ch.hints&&ch.hints[0]?'<div class="hintbox">💡 '+ch.hints[0]+'</div>':'');
+        if(!state.solved[cid(n.id,kind)]) awardSolve(n,kind,true); setTimeout(renderModal,2200);
       } else { b.classList.add('wrong'); wrap.children[ch.answer].classList.add('right');
         document.getElementById('qres').innerHTML='<div class="res-msg err">❌ Not quite — the highlighted answer is correct. '+(ch.hints?ch.hints[0]:'')+'</div>';
         breakCombo(); save(); setTimeout(()=>document.querySelectorAll('.quiz-opt').forEach(x=>x.style.pointerEvents=''),1200); } };
